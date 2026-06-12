@@ -38,6 +38,15 @@ Five badges on the first line after the H1 title, in this order: Swift 6.2+, Pla
 
 Must convey: Swift package providing a `LanguageModel` implementation that connects Apple's FoundationModels to any Open Responses specification endpoint. Must use "drop-in" or "swap" language to convey substitutability.
 
+### Why Section
+
+~15-20 lines introducing the project's philosophy focused on **provider freedom**:
+- FoundationModels gives Swift a unified session API, but the on-device model is one provider among many
+- The problem: provider lock-in forces app rewrites when switching providers
+- The solution: target a specification (Open Responses), not a provider — any compatible endpoint works automatically
+- The bridge is intentionally thin — three translation layers, no business logic
+- Link to `docs/philosophy.md` for the full design philosophy
+
 ### The Substitutability Story
 
 This is the README's core section. Two paired code blocks:
@@ -169,7 +178,41 @@ Reference `ReasoningView.swift` for a complete example.
 
 ---
 
-## 3. CLAUDE.md
+## 3. docs/philosophy.md
+
+**Purpose:** Deep-dive article exploring the project's design philosophy for an external audience. Draws from the WHY spec but reframed from contributor-facing rationale to user-facing narrative.
+
+**Target length:** ~80-120 lines.
+
+**Structure:**
+
+### 1. The Provider Problem
+LLM apps couple to provider-specific APIs. Switching providers means rewriting networking, auth, streaming, error handling. FoundationModels solves the app side; this package fills the provider side.
+
+### 2. Standards Over SDKs
+Target a specification (Open Responses) rather than building per-provider adapters. New providers work automatically. Tradeoff: providers must implement the spec or sit behind a proxy.
+
+### 3. The Thin Adapter Principle
+No business logic, no caching, no opinions. Three translation layers (RequestBuilder, EventTranslator, ErrorMapper). Why thin matters: fewer opinions means fewer conflicts with either upstream.
+
+### 4. Capability Flags: Explicit Over Implicit
+Manual declaration over auto-detection. Why: avoids latency, unreliable model reporting, and silent feature misapplication. One-time cost per model prevents runtime surprises.
+
+### 5. Error Transparency
+Two-layer mapping preserves provider-specific detail while conforming to framework-standard errors. Unrecognized errors pass through unmapped.
+
+### 6. Local-First Flexibility
+LM Studio convention, proxied auth for enterprise, stream resilience for servers that don't emit `response.completed`. The library meets providers where they are.
+
+### Constraints
+
+- Written for external audiences — not contributor-facing like the WHY spec
+- Must be accurate against the WHY spec but use accessible language
+- No code blocks — this is a philosophy article, not a usage guide
+
+---
+
+## 4. CLAUDE.md
 
 **Purpose:** AI contributor's entry point to the codebase. Orients the reader to navigate the project and generate correct code.
 
@@ -236,7 +279,7 @@ Directive: "Consult Spec/ files for detailed design decisions."
 
 ---
 
-## 4. AGENTS.md
+## 5. AGENTS.md
 
 **Purpose:** Machine-readable patterns and pitfalls for AI coding tools consuming this library (not contributing to it).
 
@@ -303,7 +346,7 @@ Numbered list:
 
 ---
 
-## 5. CONTRIBUTING.md
+## 6. CONTRIBUTING.md
 
 **Purpose:** Tell potential contributors how this project works — specs are the source of truth, code is generated from specs, and the contribution path is GitHub Issues, not code PRs.
 
@@ -352,6 +395,7 @@ Must link to the `Spec/` directory so contributors can see how specs are structu
 **Create:**
 - `README.md`
 - `docs/getting-started.md`
+- `docs/philosophy.md`
 - `CLAUDE.md`
 - `AGENTS.md`
 - `CONTRIBUTING.md`
@@ -376,6 +420,11 @@ Must link to the `Spec/` directory so contributors can see how specs are structu
 
 - [ ] README code examples compile when extracted and built against a project importing the package
 - [ ] README substitutability story shows identical usage code with only the session init differing
+- [ ] README "Why" section is ~15-20 lines, between the description and "The Swap"
+- [ ] README links to `docs/philosophy.md`
+- [ ] `docs/philosophy.md` is ~80-120 lines with 6 sections covering provider problem, standards, thin adapter, capability flags, errors, and local flexibility
+- [ ] Philosophy article content is accurate against the WHY spec
+- [ ] Philosophy article is written for external audiences, not contributor-facing
 - [ ] Getting-started guide progresses from basic streaming through reasoning with increasing complexity
 - [ ] Getting-started guide code examples compile and each section builds on the previous
 - [ ] Getting-started guide references correct example app files (ToolCallingView.swift, StructuredOutputView.swift, etc.)

@@ -8,6 +8,18 @@
 
 A drop-in `LanguageModel` implementation that connects Apple's FoundationModels to any [Open Responses](https://www.openresponses.org/) specification endpoint — swap in `OpenResponsesLanguageModel` and your existing FoundationModels code works with any compatible provider.
 
+## Why
+
+Apple's FoundationModels gives Swift apps a unified API for language models — sessions, streaming, tools, structured output — all through `LanguageModelSession`. But the on-device model is one provider among many. When you want to use Claude, GPT, Llama, or a local server, you shouldn't have to rewrite your app.
+
+The problem is provider lock-in. Each LLM provider has its own SDK, its own request format, its own streaming protocol, its own error types. Switching providers means rewriting networking, auth, and response handling — even though the app-level intent ("stream a response to this prompt") hasn't changed.
+
+This package solves it by targeting a *specification*, not a provider. The [Open Responses API](https://www.openresponses.org/) defines a standard inference endpoint that any provider can implement. SwiftOpenResponsesLanguageModel bridges FoundationModels (the app-facing API) to Open Responses (the provider-facing protocol). The result: write your app once against `LanguageModelSession`, swap providers by changing one line.
+
+The bridge is intentionally thin — no business logic, no caching, no opinions. Three translation layers convert requests in, events out, and errors between. Both FoundationModels and Open Responses can evolve independently; only the affected translator needs updating.
+
+See [docs/philosophy.md](docs/philosophy.md) for the full design philosophy.
+
 ## The Swap
 
 **With on-device model:**

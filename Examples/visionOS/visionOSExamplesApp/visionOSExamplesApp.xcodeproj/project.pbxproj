@@ -1,0 +1,343 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		CC0000010000000000000000 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000020000000000000000 /* App.swift */; };
+		CC0000030000000000000000 /* EndpointSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000040000000000000000 /* EndpointSettings.swift */; };
+		CC0000050000000000000000 /* SettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000060000000000000000 /* SettingsSheet.swift */; };
+		CC0000070000000000000000 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000080000000000000000 /* RootView.swift */; };
+		CC0000090000000000000000 /* StreamingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000A0000000000000000 /* StreamingView.swift */; };
+		CC00000B0000000000000000 /* MultiTurnView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000C0000000000000000 /* MultiTurnView.swift */; };
+		CC00000D0000000000000000 /* ToolCallingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000E0000000000000000 /* ToolCallingView.swift */; };
+		CC00000F0000000000000000 /* StructuredOutputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000100000000000000000 /* StructuredOutputView.swift */; };
+		CC0000110000000000000000 /* ImageInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000120000000000000000 /* ImageInputView.swift */; };
+		CC0000130000000000000000 /* ReasoningView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0000140000000000000000 /* ReasoningView.swift */; };
+		CC0000150000000000000000 /* SwiftOpenResponsesLanguageModel in Frameworks */ = {isa = PBXBuildFile; productRef = CC0000160000000000000000 /* SwiftOpenResponsesLanguageModel */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		CC0000020000000000000000 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
+		CC0000040000000000000000 /* EndpointSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EndpointSettings.swift; sourceTree = "<group>"; };
+		CC0000060000000000000000 /* SettingsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSheet.swift; sourceTree = "<group>"; };
+		CC0000080000000000000000 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		CC00000A0000000000000000 /* StreamingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamingView.swift; sourceTree = "<group>"; };
+		CC00000C0000000000000000 /* MultiTurnView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiTurnView.swift; sourceTree = "<group>"; };
+		CC00000E0000000000000000 /* ToolCallingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolCallingView.swift; sourceTree = "<group>"; };
+		CC0000100000000000000000 /* StructuredOutputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StructuredOutputView.swift; sourceTree = "<group>"; };
+		CC0000120000000000000000 /* ImageInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageInputView.swift; sourceTree = "<group>"; };
+		CC0000140000000000000000 /* ReasoningView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReasoningView.swift; sourceTree = "<group>"; };
+		CC0000170000000000000000 /* visionOSExamplesApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = visionOSExamplesApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CC0000180000000000000000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		CC0000220000000000000000 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CC0000150000000000000000 /* SwiftOpenResponsesLanguageModel in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		CC0000240000000000000000 = {
+			isa = PBXGroup;
+			children = (
+				CC0000020000000000000000 /* App.swift */,
+				CC0000040000000000000000 /* EndpointSettings.swift */,
+				CC0000060000000000000000 /* SettingsSheet.swift */,
+				CC0000080000000000000000 /* RootView.swift */,
+				CC0000260000000000000000 /* Examples */,
+				CC0000180000000000000000 /* Info.plist */,
+				CC0000250000000000000000 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		CC0000250000000000000000 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				CC0000170000000000000000 /* visionOSExamplesApp.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		CC0000260000000000000000 /* Examples */ = {
+			isa = PBXGroup;
+			children = (
+				CC00000A0000000000000000 /* StreamingView.swift */,
+				CC00000C0000000000000000 /* MultiTurnView.swift */,
+				CC00000E0000000000000000 /* ToolCallingView.swift */,
+				CC0000100000000000000000 /* StructuredOutputView.swift */,
+				CC0000120000000000000000 /* ImageInputView.swift */,
+				CC0000140000000000000000 /* ReasoningView.swift */,
+			);
+			path = Examples;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		CC0000190000000000000000 /* visionOSExamplesApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CC00001B0000000000000000 /* Build configuration list for PBXNativeTarget "visionOSExamplesApp" */;
+			buildPhases = (
+				CC0000210000000000000000 /* Sources */,
+				CC0000220000000000000000 /* Frameworks */,
+				CC0000230000000000000000 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = visionOSExamplesApp;
+			packageProductDependencies = (
+				CC0000160000000000000000 /* SwiftOpenResponsesLanguageModel */,
+			);
+			productName = visionOSExamplesApp;
+			productReference = CC0000170000000000000000 /* visionOSExamplesApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		CC00001A0000000000000000 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2700;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					CC0000190000000000000000 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+				};
+			};
+			buildConfigurationList = CC00001C0000000000000000 /* Build configuration list for PBXProject "visionOSExamplesApp" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = CC0000240000000000000000;
+			productRefGroup = CC0000250000000000000000 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				CC0000190000000000000000 /* visionOSExamplesApp */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		CC0000230000000000000000 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		CC0000210000000000000000 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CC0000010000000000000000 /* App.swift in Sources */,
+				CC0000030000000000000000 /* EndpointSettings.swift in Sources */,
+				CC0000050000000000000000 /* SettingsSheet.swift in Sources */,
+				CC0000070000000000000000 /* RootView.swift in Sources */,
+				CC0000090000000000000000 /* StreamingView.swift in Sources */,
+				CC00000B0000000000000000 /* MultiTurnView.swift in Sources */,
+				CC00000D0000000000000000 /* ToolCallingView.swift in Sources */,
+				CC00000F0000000000000000 /* StructuredOutputView.swift in Sources */,
+				CC0000110000000000000000 /* ImageInputView.swift in Sources */,
+				CC0000130000000000000000 /* ReasoningView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		CC00001D0000000000000000 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = YWJU9P6KL8;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = xros;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				XROS_DEPLOYMENT_TARGET = 27.0;
+			};
+			name = Debug;
+		};
+		CC00001E0000000000000000 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = YWJU9P6KL8;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_FAST_MATH = YES;
+				SDKROOT = xros;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				XROS_DEPLOYMENT_TARGET = 27.0;
+			};
+			name = Release;
+		};
+		CC00001F0000000000000000 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = YWJU9P6KL8;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.visionOSExamplesApp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = xros;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 7;
+				XROS_DEPLOYMENT_TARGET = 27.0;
+			};
+			name = Debug;
+		};
+		CC0000200000000000000000 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = YWJU9P6KL8;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.visionOSExamplesApp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = xros;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 7;
+				XROS_DEPLOYMENT_TARGET = 27.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		CC00001B0000000000000000 /* Build configuration list for PBXNativeTarget "visionOSExamplesApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CC00001F0000000000000000 /* Debug */,
+				CC0000200000000000000000 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CC00001C0000000000000000 /* Build configuration list for PBXProject "visionOSExamplesApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CC00001D0000000000000000 /* Debug */,
+				CC00001E0000000000000000 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		CC0000160000000000000000 /* SwiftOpenResponsesLanguageModel */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SwiftOpenResponsesLanguageModel;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = CC00001A0000000000000000 /* Project object */;
+}

@@ -1,0 +1,33 @@
+{
+  "originHash" : "ea1f4b1f343376912ef848a5df43127bfc0b1036bf7f59112e3665f011b4febc",
+  "pins" : [
+    {
+      "identity" : "swift-syntax",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swiftlang/swift-syntax.git",
+      "state" : {
+        "revision" : "4799286537280063c85a32f09884cfbca301b1a1",
+        "version" : "602.0.0"
+      }
+    },
+    {
+      "identity" : "swiftllmtoolmacros",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/RichNasz/SwiftLLMToolMacros",
+      "state" : {
+        "revision" : "9fa3127ec5f1ee5163e451e09b48ae09d7c25fb6",
+        "version" : "0.2.0"
+      }
+    },
+    {
+      "identity" : "swiftopenresponsesdsl",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/RichNasz/SwiftOpenResponsesDSL.git",
+      "state" : {
+        "revision" : "5a937cdf041ed6a4ddc9a466007e844d47aadcb9",
+        "version" : "0.2.0"
+      }
+    }
+  ],
+  "version" : 3
+}

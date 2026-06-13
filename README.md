@@ -101,6 +101,27 @@ See [Spec/SwiftOpenResponsesLanguageModel-WHAT.md](Spec/SwiftOpenResponsesLangua
 
 See [docs/getting-started.md](docs/getting-started.md) for the full progression from basic streaming through tool calling, structured output, image input, and reasoning. Complete app implementations are in [Examples/](Examples/) — the visionOS examples app demonstrates all six usage patterns.
 
+## Testing
+
+```bash
+swift test
+```
+
+This runs the unit tests, which cover the three translation layers (RequestBuilder, EventTranslator, ErrorMapper) with no network calls. Requires macOS 27+ with Xcode 27+.
+
+### Integration Tests
+
+A separate test target exercises the full `LanguageModelSession` stack against a live Open Responses endpoint. Set two environment variables to enable them:
+
+```bash
+export OPEN_RESPONSES_BASE_URL=http://localhost:1234/v1/responses
+export OPEN_RESPONSES_API_KEY=your-key
+```
+
+Optional variables control the model ID, enable reasoning tests, or disable capabilities your provider doesn't support. Integration tests skip cleanly when unconfigured — `swift test` always works without an endpoint.
+
+See [Spec/SwiftOpenResponsesLanguageModel-Tests-HOW.md](Spec/SwiftOpenResponsesLanguageModel-Tests-HOW.md#running-integration-tests) for the full environment variable reference and run instructions.
+
 ## For AI Coding Tools
 
 See [AGENTS.md](AGENTS.md) for machine-readable patterns and pitfalls.

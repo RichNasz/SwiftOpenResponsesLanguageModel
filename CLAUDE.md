@@ -51,10 +51,38 @@ Consult `Spec/` files for detailed design decisions:
 | `SwiftOpenResponsesLanguageModel-WHAT.md` | Public API surface + acceptance criteria |
 | `SwiftOpenResponsesLanguageModel-HOW.md` | Implementation details |
 | `SwiftOpenResponsesLanguageModel-WHY.md` | Design rationale |
-| `SwiftOpenResponsesLanguageModel-Tests-WHAT/HOW/WHY.md` | Test strategy + implementation |
+| `SwiftOpenResponsesLanguageModel-Tests-WHAT/HOW/WHY.md` | Test strategy + implementation (unit + integration) |
 
 ## Testing Strategy
 
-- Unit tests only, no live API calls
-- Swift Testing framework (`@Test`, `#expect`, `@Suite`)
-- Four test suites: ErrorMapperTests, OpenResponsesModelTests, RequestBuilderTests, EventTranslatorTests
+Two test targets:
+
+- **SwiftOpenResponsesLanguageModelTests** — Unit tests for the three translation components. No network calls. Four suites: ErrorMapperTests, OpenResponsesModelTests, RequestBuilderTests, EventTranslatorTests.
+- **IntegrationTests** — End-to-end tests through `LanguageModelSession` against a live Open Responses endpoint. Gated on environment variables; skip if not configured. Five suites: BasicGeneration, ToolCalling, StructuredOutput, Reasoning, ErrorHandling.
+
+Both use Swift Testing framework (`@Test`, `#expect`, `@Suite`).
+
+```bash
+# Unit tests (integration tests skip automatically)
+swift test
+
+# Integration tests — requires Xcode 27 beta toolchain and env vars set:
+DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer \
+  xcodebuild build-for-testing \
+  -scheme SwiftOpenResponsesLanguageModel \
+  -destination 'platform=macOS' \
+  -skipPackagePluginValidation -skipMacroValidation -quiet
+
+DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer \
+  xcrun xctest .build/path/to/IntegrationTests.xctest
+```
+
+Note: `xcodebuild test` does not pass shell environment variables to the test process. Use `xcrun xctest <bundle>` directly, which inherits the shell environment.
+
+Integration test environment variables:
+- `OPEN_RESPONSES_BASE_URL` — full endpoint URL (required)
+- `OPEN_RESPONSES_API_KEY` — API key (required)
+- `OPEN_RESPONSES_MODEL_ID` — model ID (default: `gpt-4o-mini`)
+- `OPEN_RESPONSES_REASONING_MODEL_ID` — reasoning model ID (optional, enables reasoning tests)
+- `OPEN_RESPONSES_STRUCTURED_OUTPUT` — `true`/`false` (default: `true`)
+- `OPEN_RESPONSES_TOOL_CALLING` — `true`/`false` (default: `true`)

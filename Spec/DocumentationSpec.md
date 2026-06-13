@@ -268,9 +268,11 @@ Directive: "Consult Spec/ files for detailed design decisions."
 
 ### Testing Strategy
 
-- Unit tests only, no live API calls
-- Swift Testing framework (`@Test`, `#expect`, `@Suite`)
-- Four test suites: ErrorMapper, OpenResponsesModel, RequestBuilder, EventTranslator
+Two test targets:
+- Unit tests (4 suites) — no live API calls, test translation components in isolation
+- Integration tests (5 suites) — end-to-end through `LanguageModelSession` against a live endpoint, gated on environment variables
+- Swift Testing framework (`@Test`, `#expect`, `@Suite`) for both targets
+- Environment variables: `OPEN_RESPONSES_BASE_URL`, `OPEN_RESPONSES_API_KEY`, plus optional capability flags
 
 ### Constraints
 

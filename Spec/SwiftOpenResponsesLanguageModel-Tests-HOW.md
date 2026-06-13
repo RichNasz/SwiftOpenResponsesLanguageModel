@@ -3,14 +3,22 @@
 ## File Structure
 
 ```
-Tests/SwiftOpenResponsesLanguageModelTests/
-├── ErrorMapperTests.swift           # ~8 tests
-├── OpenResponsesModelTests.swift    # ~6 tests
-├── RequestBuilderTests.swift        # ~20 tests
-└── EventTranslatorTests.swift       # ~12 tests
+Tests/SwiftOpenResponsesLanguageModelTests/     # Unit tests (no network)
+├── ErrorMapperTests.swift                      # ~8 tests
+├── OpenResponsesModelTests.swift               # ~6 tests
+├── RequestBuilderTests.swift                   # ~20 tests
+└── EventTranslatorTests.swift                  # ~12 tests
+
+Tests/IntegrationTests/                         # Integration tests (live endpoint)
+├── IntegrationTestConfiguration.swift          # Env var reading, model factory, skip predicates
+├── BasicGenerationTests.swift                  # 5 tests: text gen, streaming, collect, multi-turn, instructions
+├── ToolCallingTests.swift                      # 2 tests: zero-arg round-trip, structured-arg round-trip
+├── StructuredOutputTests.swift                 # 1 test: @Generable struct decoding
+├── ReasoningTests.swift                        # 2 tests: reasoning respond + stream
+└── ErrorHandlingTests.swift                    # 2 tests: invalid URL, invalid path
 ```
 
-The existing `SwiftOpenLanguageModelTests.swift` placeholder is replaced by these files.
+The `IntegrationTests` target is defined separately in `Package.swift` and can be run independently via `swift test --filter IntegrationTests` or `xcodebuild -only-testing IntegrationTests`.
 
 ## Imports
 
@@ -192,9 +200,138 @@ Test `EventTranslator.translate(_:into:)` by constructing a `StreamEvent` stream
 
 ---
 
-## Implementation Order
+## Implementation Order (Unit Tests)
 
 1. **ErrorMapperTests** — simplest, validates test infrastructure
 2. **OpenResponsesModelTests** — validates capability mapping used by RequestBuilder
 3. **RequestBuilderTests** — bulk of coverage, depends on fixture construction patterns
 4. **EventTranslatorTests** — most complex async patterns, built last
+
+---
+
+## Integration Tests
+
+### Running Integration Tests
+
+**Minimal (LM Studio or local server, no auth):**
+
+```bash
+export OPEN_RESPONSES_BASE_URL=http://localhost:1234/v1/responses
+export OPEN_RESPONSES_API_KEY=nokey
+export OPEN_RESPONSES_MODEL_ID=my-local-model
+export OPEN_RESPONSES_STRUCTURED_OUTPUT=false  # most local models don't support this
+```
+
+**Full (OpenAI-compatible API with reasoning model):**
+
+```bash
+export OPEN_RESPONSES_BASE_URL=https://api.openai.com/v1/responses
+export OPEN_RESPONSES_API_KEY=sk-...
+export OPEN_RESPONSES_MODEL_ID=gpt-4o-mini
+export OPEN_RESPONSES_REASONING_MODEL_ID=o4-mini
+```
+
+**Invocation:**
+
+The package requires Xcode 27+ (beta). Use `xcodebuild` with the beta toolchain, then run the test bundle directly with `xcrun xctest` (which inherits shell environment variables — `xcodebuild test` does not pass env vars to the test process):
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer \
+  xcodebuild build-for-testing \
+  -scheme SwiftOpenResponsesLanguageModel \
+  -destination 'platform=macOS' \
+  -skipPackagePluginValidation -skipMacroValidation -quiet
+
+DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer \
+  xcrun xctest path/to/DerivedData/.../IntegrationTests.xctest
+```
+
+Without env vars set, all 12 integration tests skip immediately with descriptive messages.
+
+### Environment Variables
+
+| Variable | Required | Default | Purpose |
+|---|---|---|---|
+| `OPEN_RESPONSES_BASE_URL` | Yes | — | Full endpoint URL (e.g., `http://localhost:1234/v1/responses`) |
+| `OPEN_RESPONSES_API_KEY` | Yes | — | API key for the provider |
+| `OPEN_RESPONSES_MODEL_ID` | No | `gpt-4o-mini` | Model ID for basic tests |
+| `OPEN_RESPONSES_REASONING_MODEL_ID` | No | — | Model ID for reasoning tests; reasoning tests skip if absent |
+| `OPEN_RESPONSES_STRUCTURED_OUTPUT` | No | `true` | Set to `false` to skip structured output and structured-arg tool tests |
+| `OPEN_RESPONSES_TOOL_CALLING` | No | `true` | Set to `false` to skip tool calling tests |
+
+### Skip Logic
+
+Suite-level: `@Suite(.enabled(if: IntegrationTestConfiguration.isConfigured))` — skips entire suite if `BASE_URL` or `API_KEY` is missing. Optional capabilities use per-test `.enabled(if:)` traits.
+
+### IntegrationTestConfiguration
+
+Shared enum providing:
+- `isConfigured`, `supportsStructuredOutput`, `supportsToolCalling`, `supportsReasoning` — static predicates for skip logic
+- `makeModel(capabilities:)` — factory producing `OpenResponsesLanguageModel` with 120s timeout
+- `makeReasoningModel()` — factory using `OPEN_RESPONSES_REASONING_MODEL_ID` with `reasoning: true`
+- `makeSession(capabilities:instructions:tools:)` — convenience that creates model + `LanguageModelSession`
+
+### Imports
+
+Integration test files use public API only:
+
+```swift
+import Testing
+import Foundation
+import FoundationModels
+import SwiftOpenResponsesLanguageModel
+```
+
+No `@testable import` — integration tests exercise the public surface.
+
+### BasicGenerationTests (5 tests)
+
+| Test | What it exercises | Assertion |
+|---|---|---|
+| `textGeneration` | `session.respond(to:)` end-to-end | `!response.content.isEmpty` |
+| `streamingTextGeneration` | `session.streamResponse(to:)` iteration | Multiple snapshots, last content non-empty |
+| `streamCollect` | `stream.collect()` convenience | `!response.content.isEmpty` |
+| `multiTurnConversation` | Two `respond` calls on same session | Second response contains info from first turn |
+| `systemInstructions` | `LanguageModelSession(model:instructions:)` | Response follows instruction constraint |
+
+### ToolCallingTests (2 tests)
+
+Two `Tool`-conforming types defined in the test file:
+- `GetCurrentDateTool` — zero-argument tool, returns formatted date string
+- `EchoTool` — single `message: String` argument, returns `"ECHO: \(message)"`
+
+| Test | Gating | What it exercises | Assertion |
+|---|---|---|---|
+| `toolCallRoundTrip` | `supportsToolCalling` | Zero-arg tool call round-trip via `LanguageModelSession` | `!response.content.isEmpty` |
+| `toolCallWithArguments` | `supportsToolCalling && supportsStructuredOutput` | Structured-arg tool call + argument decoding | `!response.content.isEmpty` |
+
+### StructuredOutputTests (1 test)
+
+`@Generable` struct `SimpleAnswer` with a single `answer: String` property.
+
+| Test | Gating | What it exercises | Assertion |
+|---|---|---|---|
+| `generableStructDecoding` | `supportsStructuredOutput` | `session.respond(to:generating: SimpleAnswer.self)` | `!response.content.answer.isEmpty` |
+
+### ReasoningTests (2 tests)
+
+Uses `IntegrationTestConfiguration.makeReasoningModel()`.
+
+| Test | Gating | What it exercises | Assertion |
+|---|---|---|---|
+| `reasoningRespond` | `supportsReasoning` | `session.respond(to:contextOptions:)` with `.moderate` | Non-empty, contains correct answer |
+| `reasoningStream` | `supportsReasoning` | `session.streamResponse(to:contextOptions:)` | Snapshots received, last content non-empty |
+
+### ErrorHandlingTests (2 tests)
+
+| Test | What it exercises | Assertion |
+|---|---|---|
+| `invalidBaseURLThrows` | Unreachable endpoint (`localhost:1`) | `session.respond` throws |
+| `invalidEndpointPathThrows` | Valid host, invalid path suffix | `session.respond` throws |
+
+### Assertion Strategy
+
+- **Loose content matching** — `contains` / `localizedStandardContains` since model outputs vary
+- **Deterministic prompts** — prompts designed for deterministic-ish answers (math, tool output, explicit instructions)
+- **No timing assumptions** — streaming tests assert snapshots > 0, not exact counts
+- **Time limits** — `.timeLimit(.minutes(3))` on generation tests, `.timeLimit(.minutes(1))` on error tests

@@ -27,5 +27,9 @@ let package = Package(
 			name: "SwiftOpenResponsesLanguageModelTests",
 			dependencies: ["SwiftOpenResponsesLanguageModel"]
 		),
+		.testTarget(
+			name: "IntegrationTests",
+			dependencies: ["SwiftOpenResponsesLanguageModel"]
+		),
 	]
 )

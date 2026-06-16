@@ -189,6 +189,7 @@ Test `EventTranslator.translate(_:into:)` by constructing a `StreamEvent` stream
 | contentDeltaSendsResponseText | `.contentPartDelta("Hello", 0, 0)` | Channel receives response appendText |
 | functionCallAddedStoresAndSends | `.outputItemAdded(.functionCall(name: "fn", callId: "c1"), 0)` | Channel receives toolCalls with empty arguments |
 | functionCallDeltaSendsArguments | `.outputItemAdded(.functionCall(...))` then `.functionCallArgumentsDelta("{", "c1", 0)` | Channel receives arguments delta with correct name |
+| functionCallDeltaBeforeOutputItemBuffers | `.functionCallArgumentsDelta("{", "c1", 0)` then `.outputItemAdded(.functionCall(name: "fn", callId: "c1"), 0)` | Buffered delta is flushed with correct tool name after outputItemAdded |
 | reasoningItemSendsText | `.outputItemAdded(.reasoning(summaryText: "thinking..."), 0)` | Channel receives reasoning appendText |
 | reasoningSummaryPartCreatesLazyID | `.reasoningSummaryPartAdded(text: "step 1")` (no prior reasoning item) | Channel receives reasoning with auto-generated entry ID |
 | responseCompletedSendsUsage | `.responseCompleted(usage: {input: 10, output: 20, cached: 5, reasoning: 3})` | Channel receives updateUsage with correct counts |

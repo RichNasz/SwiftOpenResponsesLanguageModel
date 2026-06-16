@@ -59,6 +59,14 @@ The comment in the source code names the affected category of server explicitly,
 
 ---
 
+## Why Argument Delta Buffering
+
+Some local LLM servers (e.g., LM Studio) emit `functionCallArgumentsDelta` events before the corresponding `outputItemAdded` event that provides the tool name. When deltas arrive first, the tool name is unknown — previously this defaulted to an empty string, which caused FoundationModels to throw "Failed to parse generated content" because the channel action contained a nameless tool call.
+
+`EventTranslator` now buffers early argument deltas in `pendingArgumentDeltas[index]` and flushes them with the correct tool name once `outputItemAdded` arrives for that index. This mirrors the same fix applied in the Gemini adapter (`SwiftGeminiLanguageModel`), where Google's streaming API exhibits the same out-of-order behavior.
+
+---
+
 ## Why Proxied Auth Mode
 
 Enterprise deployments and development environments often sit behind authenticating reverse proxies — API gateways, internal auth layers, mutual TLS termination — that inject authorization before traffic reaches the inference server. In these environments, the client itself should not add an `Authorization` header (it may conflict with the proxy's auth scheme, or the proxy may sign the entire request).

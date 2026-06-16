@@ -20,6 +20,7 @@ struct EventTranslator: Sendable {
 		into channel: LanguageModelExecutorGenerationChannel
 	) async throws {
 		var activeFunctionCalls: [Int: (id: String, name: String)] = [:]
+		var pendingArgumentDeltas: [Int: [(delta: String, callId: String)]] = [:]
 		var reasoningEntryID: String?
 		var sentCompletion = false
 
@@ -36,17 +37,20 @@ struct EventTranslator: Sendable {
 				)
 
 			case .functionCallArgumentsDelta(let delta, let callId, let index):
-				let name = activeFunctionCalls[index]?.name ?? ""
-				await channel.send(
-					.toolCalls(
-						entryID: toolCallsEntryID,
-						action: .toolCall(
-							id: callId,
-							name: name,
-							action: .appendArguments(delta, tokenCount: 0)
+				if let call = activeFunctionCalls[index] {
+					await channel.send(
+						.toolCalls(
+							entryID: toolCallsEntryID,
+							action: .toolCall(
+								id: callId,
+								name: call.name,
+								action: .appendArguments(delta, tokenCount: 0)
+							)
 						)
 					)
-				)
+				} else {
+					pendingArgumentDeltas[index, default: []].append((delta: delta, callId: callId))
+				}
 
 			case .outputItemAdded(let item, let index):
 				switch item {
@@ -62,6 +66,20 @@ struct EventTranslator: Sendable {
 							)
 						)
 					)
+					if let buffered = pendingArgumentDeltas.removeValue(forKey: index) {
+						for pending in buffered {
+							await channel.send(
+								.toolCalls(
+									entryID: toolCallsEntryID,
+									action: .toolCall(
+										id: pending.callId,
+										name: call.name,
+										action: .appendArguments(pending.delta, tokenCount: 0)
+									)
+								)
+							)
+						}
+					}
 
 				case .reasoning(let reasoning):
 					let entryID = UUID().uuidString

@@ -172,8 +172,8 @@ State tracked across events:
 | StreamEvent | Channel action |
 |---|---|
 | `.contentPartDelta(delta, _, _)` | `.response(entryID: responseEntryID, action: .appendText(delta, tokenCount: 0))` |
-| `.functionCallArgumentsDelta(delta, callId, index)` | `.toolCalls(entryID: toolCallsEntryID, action: .toolCall(id: callId, name: activeFunctionCalls[index]?.name ?? "", action: .appendArguments(delta, tokenCount: 0)))` |
-| `.outputItemAdded(.functionCall(call), index)` | Stores `(id: call.callId, name: call.name)` in `activeFunctionCalls[index]`; sends `.toolCalls` with `.appendArguments("", tokenCount: 0)` to open the entry |
+| `.functionCallArgumentsDelta(delta, callId, index)` | If `activeFunctionCalls[index]` exists, sends `.toolCalls(entryID: toolCallsEntryID, action: .toolCall(id: callId, name: name, action: .appendArguments(delta, tokenCount: 0)))`; otherwise buffers the delta in `pendingArgumentDeltas[index]` until the corresponding `.outputItemAdded` arrives |
+| `.outputItemAdded(.functionCall(call), index)` | Stores `(id: call.callId, name: call.name)` in `activeFunctionCalls[index]`; sends `.toolCalls` with `.appendArguments("", tokenCount: 0)` to open the entry; flushes any `pendingArgumentDeltas[index]` with the now-known tool name |
 | `.outputItemAdded(.reasoning(reasoning), _)` | Creates `reasoningEntryID` (new UUID); sends `.reasoning` with `reasoning.summaryText` if non-nil |
 | `.reasoningSummaryPartAdded(part, _, _)` | Uses existing `reasoningEntryID` or creates one lazily (handles providers that emit this event without a prior `.outputItemAdded(.reasoning)`); sends `.reasoning(entryID:, action: .appendText(part.text, tokenCount: 0))` |
 | `.responseCompleted(response)` | Extracts `inputTokens`, `outputTokens`, `inputTokensDetails.cachedTokens`, and `outputTokensDetails.reasoningTokens` from `response.usage`; sends `.response(entryID: responseEntryID, action: .updateUsage(...))` with these counts (defaulting to 0 for absent fields); sets `sentCompletion = true` |

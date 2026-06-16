@@ -61,6 +61,14 @@ The existing project and its dependency (SwiftOpenResponsesDSL) both use Swift T
 
 ---
 
+## Why the Channel Drain Task
+
+`LanguageModelExecutorGenerationChannel` is an async channel with a bounded internal buffer. When no consumer is iterating the channel, `send()` blocks once the buffer fills. In tests, the translator is both the producer (calling `send()`) and the only task running — there is no `LanguageModelSession` on the other end consuming actions. Without a drain task, tests hang after all assertions pass because `send()` never returns.
+
+The fix is a background `Task { for try await _ in channel {} }` started before `translate()` and cancelled in `defer` after it completes. The drain discards all actions (tests verify behavior through successful completion and error propagation, not by inspecting individual channel actions). This is the same pattern used in `SwiftGeminiLanguageModel`'s `EventTranslatorTests`.
+
+---
+
 ## Why SourceKit Diagnostics Are Ignored
 
 SourceKit (the IDE language service) shows false-positive "cannot find type" errors for `ContextOptions`, `LanguageModelExecutorGenerationRequest`, and `LanguageModelExecutorGenerationChannel` in test files. The actual compiler resolves these types correctly — builds succeed and tests run. This is a known SourceKit indexing issue with new framework types in beta SDKs. Tests should not be restructured to work around SourceKit limitations.

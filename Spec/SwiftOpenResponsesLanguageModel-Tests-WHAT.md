@@ -23,7 +23,7 @@ Capability flag defaults, capability mapping to `LanguageModelCapabilities`, and
 
 ### EventTranslator
 
-`EventTranslator.translate(_:into:)` — translates `AsyncThrowingStream<StreamEvent>` into `LanguageModelExecutorGenerationChannel` sends. Covers all handled stream event types, error propagation, and the zero-usage fallback for providers that omit `response.completed`.
+`EventTranslator.translate(_:into:)` — translates `AsyncThrowingStream<StreamEvent>` into `LanguageModelExecutorGenerationChannel` sends. Covers all handled stream event types, error propagation, the zero-usage fallback for providers that omit `response.completed`, and out-of-order event handling (argument deltas arriving before the tool name is known via `outputItemAdded`).
 
 ## Integration Test Components
 

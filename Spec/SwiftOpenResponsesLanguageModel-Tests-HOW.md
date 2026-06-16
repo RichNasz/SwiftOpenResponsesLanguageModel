@@ -178,9 +178,10 @@ Test `EventTranslator.translate(_:into:)` by constructing a `StreamEvent` stream
 
 1. Create `EventTranslator(responseEntryID: "resp-1", toolCallsEntryID: "tc-1")` with deterministic IDs
 2. Create `AsyncThrowingStream<StreamEvent, Error>` that yields specific events then finishes
-3. Create `LanguageModelExecutorGenerationChannel()` 
-4. Call `translator.translate(stream, into: channel)` in a task
-5. Verify results — the exact verification approach depends on what the channel exposes for reading. If the channel doesn't support async iteration from the test side, verify behavior through the translator's state or by testing at a higher level through the executor.
+3. Create `LanguageModelExecutorGenerationChannel()`
+4. Start a drain task — `Task { for try await _ in channel {} }` — to consume channel actions (without this, `channel.send()` blocks when the internal buffer fills, hanging the test)
+5. Call `translator.translate(stream, into: channel)` and await completion
+6. Cancel the drain task in `defer`
 
 ### Test cases
 

@@ -62,4 +62,6 @@ The library meets providers where they are, not where a specification says they 
 
 **Stream resilience.** Some local LLM servers (particularly Ollama-based implementations) never emit `response.completed` — the SSE stream simply ends. FoundationModels requires a usage update to finalize a generation; without it, the session stalls. The `EventTranslator` detects this condition and sends a zero-usage fallback after the stream ends. Zero token counts are a minor inaccuracy that is far preferable to a hung session.
 
+**Out-of-order event buffering.** Some local LLM servers (notably LM Studio) emit `functionCallArgumentsDelta` events before the corresponding `outputItemAdded` event that provides the tool name. The Open Responses spec doesn't mandate event ordering within a streamed response. Without buffering, the tool name defaults to an empty string and FoundationModels throws "Failed to parse generated content." The `EventTranslator` buffers early argument deltas and flushes them with the correct tool name once `outputItemAdded` arrives.
+
 These accommodations are pragmatic, not principled. The Open Responses spec defines the ideal; reality includes servers that don't fully implement it. The library bridges both.

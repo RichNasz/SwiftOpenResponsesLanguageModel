@@ -20,7 +20,7 @@ Tests require macOS 27+ (Tahoe) with Xcode 27+.
 Thin adapter — no business logic, no caching, no conversation management. Three translation layers:
 
 - **RequestBuilder** — converts FoundationModels `LanguageModelExecutorGenerationRequest` to Open Responses `ResponseRequest`
-- **EventTranslator** — converts Open Responses `AsyncThrowingStream<StreamEvent>` to FoundationModels `LanguageModelExecutorGenerationChannel` actions
+- **EventTranslator** — converts Open Responses `AsyncThrowingStream<StreamEvent>` to FoundationModels `LanguageModelExecutorGenerationChannel` actions; buffers out-of-order argument deltas and handles missing completion events
 - **ErrorMapper** — maps `LLMError` to `LanguageModelError` with an intermediate `OpenResponsesError` layer
 
 Key decision: capability flags are declared per-model at init time, not auto-detected. See `Spec/SwiftOpenResponsesLanguageModel-WHY.md` for rationale.

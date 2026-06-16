@@ -148,6 +148,7 @@ do {
 2. **Wrong platform** — Using this package without macOS 27+ / iOS 27+. FoundationModels is only available on these platforms.
 3. **Unused model** — Constructing `OpenResponsesLanguageModel` but not passing it to `LanguageModelSession`. The model does nothing on its own.
 4. **On-device assumptions** — Remote providers have different latency, token limits, and error patterns compared to on-device models.
+5. **Stream event ordering** — Local LLM servers may emit events in a different order than hosted APIs. The `EventTranslator` buffers `functionCallArgumentsDelta` events that arrive before `outputItemAdded` and handles streams that end without `response.completed`. Don't assume canonical event ordering when modifying stream handling.
 
 ## Quick Reference
 

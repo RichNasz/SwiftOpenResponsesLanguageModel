@@ -40,6 +40,8 @@ struct EventTranslatorTests {
 			toolCallsEntryID: "tc-1"
 		)
 		let channel = LanguageModelExecutorGenerationChannel()
+		let drainTask = Task { for try await _ in channel {} }
+		defer { drainTask.cancel() }
 		try await translator.translate(makeStream(events: events), into: channel)
 	}
 

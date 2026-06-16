@@ -2,9 +2,23 @@ import Foundation
 import FoundationModels
 import SwiftOpenResponsesDSL
 
+/// Errors originating from the Open Responses provider or transport layer.
+///
+/// Some errors from the underlying `LLMClient` are mapped to `LanguageModelError` for
+/// framework compatibility (rate limits, context-size exceeded, timeouts). Errors that
+/// don't map to a framework type surface as `OpenResponsesError` instead.
 public enum OpenResponsesError: Error, Sendable {
+	/// The executor could not find a usable API key or auth configuration.
 	case missingCredential
+
+	/// The provider returned an error response with a machine-readable code and human-readable message.
+	///
+	/// - Parameters:
+	///   - code: Provider-specific error code (e.g., `"invalid_api_key"`).
+	///   - message: Human-readable description from the provider.
 	case apiError(code: String, message: String)
+
+	/// The streaming connection failed with a provider-supplied error message.
 	case streamError(String)
 }
 

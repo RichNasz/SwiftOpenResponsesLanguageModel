@@ -285,11 +285,17 @@ Two test targets:
 
 **Purpose:** Machine-readable patterns and pitfalls for AI coding tools consuming this library (not contributing to it).
 
-**Target length:** ~100-120 lines.
+**Target length:** ~140-170 lines.
 
 **Format:** Each topic section follows Pattern/Pitfalls structure.
 
 **Structure:**
+
+### Installation
+
+SPM dependency snippets for both `Package.swift` and Xcode GUI workflows. Pitfalls covering platform requirements (macOS 27+ / iOS 27+ / visionOS 27+ / watchOS 27+, Xcode 27+), Swift tools version (6.2+), and transitive dependencies (SwiftOpenResponsesDSL pulled in automatically).
+
+The `Package.swift` snippet must use the canonical URL `https://github.com/RichNasz/SwiftOpenResponsesLanguageModel.git` and show both the `.package(url:from:)` dependency and the `.product(name:package:)` target dependency.
 
 ### Project Overview
 
@@ -339,6 +345,15 @@ Numbered list:
 2. Using this package without macOS 27+ / iOS 27+ — FoundationModels is only available on these platforms
 3. Constructing `OpenResponsesLanguageModel` but not passing it to `LanguageModelSession` — the model does nothing on its own
 4. Expecting on-device model behavior — remote providers have different latency, token limits, and error patterns
+
+### Quick Reference
+
+A single complete copy-pasteable code block showing the full happy path: model construction with all capability flags, `OpenResponsesLanguageModel` init, `LanguageModelSession(model:)`, and streaming. Every parameter has an inline comment explaining its purpose and default value.
+
+Must use correct current API signatures:
+- `OpenResponsesModel(id:capabilities:)` with `Capabilities(samplingParams:reasoning:structuredOutput:imageInput:toolCalling:)`
+- `OpenResponsesLanguageModel(name:auth:baseURL:timeout:)` — note the `name:` label takes `OpenResponsesModel`
+- `AuthMode.apiKey(_:)` or `AuthMode.proxied(headers:)`
 
 ### Constraints
 
@@ -392,6 +407,40 @@ Must link to the `Spec/` directory so contributors can see how specs are structu
 
 ---
 
+## 7. Source Doc Comment Convention
+
+**Purpose:** Ensure all public symbols carry `///` documentation comments so DocC, Xcode Quick Help, and AI coding tools can surface API docs inline.
+
+**Scope:** Every `public` type, initializer, property, enum case, and method in `Sources/`. Internal types are not documented.
+
+**Rules:**
+
+1. **Summary line** — First line is a single sentence describing the symbol.
+2. **Markup tags** — Use `- Parameters:`, `- Returns:`, `- Throws:` for initializers and methods with multiple inputs or notable error behavior.
+3. **Important callouts** — Use `- Important:` for pitfalls (surprising parameter labels, silent behavior when flags are off, empty-string conventions).
+4. **Default values** — State default values explicitly in parameter docs (e.g., "Default: `true`").
+5. **Code examples** — Add one inline code example on the main entry-point type only (`OpenResponsesLanguageModel`). Other types get summary + parameter docs only.
+6. **Length proportionality** — 1–2 lines for properties and enum cases, 3–5 lines for type summaries, 5–10 lines for multi-parameter initializers.
+7. **No internal docs** — Only document `public` API that package consumers see. `RequestBuilder`, `EventTranslator`, and `ErrorMapper` (the `enum`, not `OpenResponsesError`) are internal and undocumented.
+
+**Example:**
+
+```swift
+/// Authentication strategy for connecting to an Open Responses endpoint.
+///
+/// - Important: With ``apiKey(_:)``, no custom headers are sent.
+///   With ``proxied(headers:)``, no `Authorization` header is sent.
+public enum AuthMode: Sendable, Hashable {
+    /// Authenticate with a Bearer token sent in the `Authorization` header.
+    ///
+    /// - Parameter apiKey: The API key string. Pass an empty string (`""`) for LM Studio,
+    ///   which substitutes `"lm-studio"` automatically.
+    case apiKey(String)
+}
+```
+
+---
+
 ## File Changes Summary
 
 **Create:**
@@ -402,11 +451,14 @@ Must link to the `Spec/` directory so contributors can see how specs are structu
 - `AGENTS.md`
 - `CONTRIBUTING.md`
 
+**Modified:**
+- `Sources/` — `///` doc comments added to all public symbols (types, initializers, properties, enum cases, methods)
+
 **Untouched:**
 - `Spec/` — all 6 spec files remain as the detailed reference
 - `Examples/` — existing example apps with their own specs
 - `docs/superpowers/` — internal planning docs
-- `Sources/` and `Tests/`
+- `Tests/`
 - `Package.swift`
 
 **Not created (intentional):**
@@ -440,3 +492,6 @@ Must link to the `Spec/` directory so contributors can see how specs are structu
 - [ ] CONTRIBUTING.md links to `Spec/` directory
 - [ ] No content duplication between README, getting-started guide, CLAUDE.md, AGENTS.md, and CONTRIBUTING.md
 - [ ] Total documentation added is under 450 lines across all five files
+- [ ] Every `public` symbol in `Sources/SwiftOpenResponsesLanguageModel/` has a `///` doc comment (types, inits, properties, enum cases, methods)
+- [ ] AGENTS.md Installation section uses the correct SPM URL (`https://github.com/RichNasz/SwiftOpenResponsesLanguageModel.git`)
+- [ ] AGENTS.md Quick Reference code block uses correct API signatures: `OpenResponsesModel(id:capabilities:)`, `OpenResponsesLanguageModel(name:auth:baseURL:timeout:)`, `AuthMode.apiKey(_:)` / `.proxied(headers:)`

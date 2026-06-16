@@ -2,6 +2,37 @@
 
 Machine-readable documentation for AI coding tools (Claude Code, Copilot, Cursor, etc.).
 
+## Installation
+
+### Package.swift
+
+Add the dependency and target:
+
+```swift
+// Package.swift
+dependencies: [
+    .package(url: "https://github.com/RichNasz/SwiftOpenResponsesLanguageModel.git", from: "0.1.0"),
+],
+targets: [
+    .target(
+        name: "YourTarget",
+        dependencies: [
+            .product(name: "SwiftOpenResponsesLanguageModel", package: "SwiftOpenResponsesLanguageModel"),
+        ]
+    ),
+]
+```
+
+### Xcode (GUI)
+
+File → Add Package Dependencies → paste `https://github.com/RichNasz/SwiftOpenResponsesLanguageModel.git` → Add Package → select your target.
+
+### Pitfalls
+
+- **Platform requirement** — Requires macOS 27.0+ / iOS 27.0+ / visionOS 27.0+ / watchOS 27.0+ and Xcode 27+. The package uses FoundationModels which is only available on these platforms.
+- **Swift tools version** — The package requires swift-tools-version 6.2+. Older toolchains will fail to resolve the package.
+- **Transitive dependency** — SwiftOpenResponsesDSL (and its transitive SwiftLLMToolMacros) are pulled in automatically. You do not need to add them separately.
+
 ## Project Overview
 
 SwiftOpenResponsesLanguageModel is a Swift package providing a `LanguageModel` implementation that bridges Apple's FoundationModels to any Open Responses specification endpoint. Drop in `OpenResponsesLanguageModel` and your existing FoundationModels code works with any compatible provider.
@@ -117,3 +148,41 @@ do {
 2. **Wrong platform** — Using this package without macOS 27+ / iOS 27+. FoundationModels is only available on these platforms.
 3. **Unused model** — Constructing `OpenResponsesLanguageModel` but not passing it to `LanguageModelSession`. The model does nothing on its own.
 4. **On-device assumptions** — Remote providers have different latency, token limits, and error patterns compared to on-device models.
+
+## Quick Reference
+
+Complete happy-path example — copy, paste, fill in your provider details:
+
+```swift
+import FoundationModels
+import SwiftOpenResponsesLanguageModel
+
+// 1. Declare model identity and capabilities.
+//    Flags must match what the provider's model actually supports.
+let model = OpenResponsesModel(
+    id: "gpt-4o",                    // model ID sent to the provider
+    capabilities: .init(
+        samplingParams: true,        // temperature, topP (default: true)
+        reasoning: false,            // extended thinking (default: false)
+        structuredOutput: true,      // JSON schema output (default: false)
+        imageInput: true,            // image attachments (default: false)
+        toolCalling: true            // function calling (default: true)
+    )
+)
+
+// 2. Create the LanguageModel with auth and endpoint URL.
+//    baseURL must include the full path, not just the host.
+let lm = OpenResponsesLanguageModel(
+    name: model,                     // NOTE: parameter label is `name:`, takes OpenResponsesModel
+    auth: .apiKey("sk-your-key"),    // or .proxied(headers: ["X-Token": "..."])
+    baseURL: URL(string: "https://api.openai.com/v1/responses")!,
+    timeout: 60                      // seconds (default: 60)
+)
+
+// 3. Use standard FoundationModels session API — no library-specific calls needed.
+let session = LanguageModelSession(model: lm)
+let stream = session.streamResponse(to: "Explain Swift concurrency.")
+for try await partial in stream {
+    print(partial.content)
+}
+```

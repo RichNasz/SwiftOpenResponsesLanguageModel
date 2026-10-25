@@ -108,8 +108,30 @@ enum RequestBuilder {
 		applySampling(request.generationOptions, to: &responseRequest, model: model)
 		applyReasoning(request.contextOptions, to: &responseRequest, model: model)
 		applyStructuredOutput(request.schema, to: &responseRequest, model: model)
+		responseRequest.metadata = wireMetadata(from: request)
 
 		return Built(request: responseRequest)
+	}
+
+	static func wireMetadataValue(_ content: GeneratedContent) -> String {
+		let raw = content.jsonString
+		guard let data = raw.data(using: .utf8),
+			  let value = try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed]),
+			  let string = value as? String else {
+			return raw
+		}
+		return string
+	}
+
+	static func wireMetadata(from request: LanguageModelExecutorGenerationRequest) -> [String: String] {
+		var values: [String: String] = [:]
+		for (key, content) in request.metadata {
+			values[key] = wireMetadataValue(content)
+		}
+		if values["request_id"] == nil {
+			values["request_id"] = request.id.uuidString
+		}
+		return values
 	}
 
 	// MARK: - Private
@@ -127,29 +149,41 @@ enum RequestBuilder {
 	}
 
 	private static func segmentsToContentParts(_ segments: [Transcript.Segment]) -> [InputContentPart] {
-		segments.compactMap { segment -> InputContentPart? in
+		segments.flatMap { segment -> [InputContentPart] in
 			switch segment {
 			case .text(let t) where !t.content.isEmpty:
-				return .inputText(t.content)
+				return [.inputText(t.content)]
 			case .text:
-				return nil
+				return []
 			case .structure(let s):
-				return .inputText(s.content.jsonString)
+				return [.inputText(s.content.jsonString)]
 			case .attachment(let a):
-				switch a.content {
-				case .image(let img):
-					if let url = img.url, !url.isFileURL {
-						return .inputImage(url: url.absoluteString, detail: nil)
-					}
-					guard let dataURI = Self.cgImageToDataURI(img.cgImage) else { return nil }
-					return .inputImage(url: dataURI, detail: nil)
-				@unknown default:
-					return nil
-				}
+				return imageParts(a)
 			@unknown default:
-				return nil
+				return []
 			}
 		}
+	}
+
+	private static func imageParts(_ segment: Transcript.AttachmentSegment) -> [InputContentPart] {
+		let imagePart: InputContentPart?
+		switch segment.content {
+		case .image(let img):
+			if let url = img.url, !url.isFileURL {
+				imagePart = .inputImage(url: url.absoluteString, detail: nil)
+			} else if let dataURI = cgImageToDataURI(img.cgImage) {
+				imagePart = .inputImage(url: dataURI, detail: nil)
+			} else {
+				imagePart = nil
+			}
+		@unknown default:
+			imagePart = nil
+		}
+		guard let imagePart else { return [] }
+		if let label = segment.label, !label.isEmpty {
+			return [.inputText(label), imagePart]
+		}
+		return [imagePart]
 	}
 
 	private static func applyToolChoice(

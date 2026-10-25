@@ -42,6 +42,8 @@ Key decision: capability flags are declared per-model at init time, not auto-det
 - **SwiftOpenResponsesDSL** — provides `LLMClient`, `ResponseRequest`, `StreamEvent`, streaming protocol
 - **SwiftLLMToolMacros** (transitive) — provides `JSONSchema` types for tool definitions
 
+Before translating a FoundationModels behavior this package does not already handle, read the Limits section of `Spec/DocumentationSpec.md`. A missing Open Responses behavior is a characteristic of that API (https://www.openresponses.org/specification, OpenAPI `2026-04-24`), not a SwiftOpenResponsesDSL bug. A behavior the spec defines and the DSL omits is a DSL gap. Do not copy the inventory into this file. The published list is the Not available section of `AGENTS.md`.
+
 ## Spec Files
 
 Consult `Spec/` files for detailed design decisions:
@@ -57,7 +59,7 @@ Consult `Spec/` files for detailed design decisions:
 
 Two test targets:
 
-- **SwiftOpenResponsesLanguageModelTests** — Unit tests for the three translation components. No network calls. Four suites: ErrorMapperTests, OpenResponsesModelTests, RequestBuilderTests, EventTranslatorTests.
+- **SwiftOpenResponsesLanguageModelTests** — Unit tests for the translation components. No network calls. Five suites: ErrorMapperTests, OpenResponsesModelTests, RequestBuilderTests, EventTranslatorTests, OpenResponsesExecutorTests.
 - **IntegrationTests** — End-to-end tests through `LanguageModelSession` against a live Open Responses endpoint. Gated on environment variables; skip if not configured. Five suites: BasicGeneration, ToolCalling, StructuredOutput, Reasoning, ErrorHandling.
 
 Both use Swift Testing framework (`@Test`, `#expect`, `@Suite`).

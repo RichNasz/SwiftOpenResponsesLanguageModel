@@ -142,6 +142,10 @@ Helper: a factory function that builds a request with a given transcript, option
 | toolOutputProducesFunctionCallOutput | `.toolOutput(id: "c1", text: "result")` | Input contains `.functionCallOutput` with callId "c1" |
 | emptyToolOutputFallsBackToEmptyJSON | `.toolOutput(id: "c1", text: "")` | Output text is `"{}"` |
 | reasoningEntrySkipped | `.reasoning(...)` | Input has no corresponding item |
+| metadataSendsDecodedStringsAndRequestID | metadata `["suite": "live"]` and a fixed request id | `metadata["suite"] == "live"` and `metadata["request_id"]` equals that UUID string |
+| callerRequestIDIsKept | metadata `["request_id": "caller"]` | `metadata["request_id"] == "caller"` |
+| objectMetadataStaysJSON | metadata value whose `jsonString` is a JSON object | The wire value equals that `jsonString` and is not unquoted |
+| labeledImagePrependsTextPart | one image segment labeled `"diagram"` | User parts are `.inputText("diagram")` then `.inputImage` with `detail == nil` |
 
 ### Generation options tests
 
@@ -200,12 +204,16 @@ Test `EventTranslator.translate(_:into:)` by constructing a `StreamEvent` stream
 | responseFailedThrowsApiError | `.responseFailed(error: {code: "err", message: "msg"})` | Throws `OpenResponsesError.apiError` |
 | errorEventThrowsStreamError | `.error("something broke")` | Throws `OpenResponsesError.streamError` |
 | noCompletionSendsFallbackUsage | Stream ends without `.responseCompleted` | Channel receives zero-usage update |
-| ignoredEventsProduceNoSends | `.responseCreated`, `.contentPartAdded`, `.outputItemDone` | No channel events |
-| outputTextDeltaDoesNotAppendAgain | `.contentPartDelta("Hello")`, `.outputTextDelta` with the same delta, `.outputTextDone("Hello")`, `.responseCompleted` | Channel receives two sends: the content delta and the usage update |
-| reasoningDeltaAppendsOnce | `.reasoningDelta("think")`, `.reasoningDone("think")`, `.responseCompleted` | Channel receives two sends: one reasoning append and the usage update |
+| responseCreatedSendsIdentityOnce | `.responseCreated` then `.responseCompleted` | Two sends: identity metadata, then usage. Not three |
+| responseCompletedSendsIdentityWhenCreatedMissing | `.responseCompleted` alone | Two sends: identity metadata, then usage |
+| annotationMetadataIsForwarded | one non-nil `.outputTextAnnotationAdded`, then `.responseCompleted` | Three sends. A nil annotation plus completion is two sends |
+| encryptedReasoningSendsSignatureOnce | reasoning item with only `encryptedContent`, including when the same item is also `.outputItemDone`, then `.responseCompleted` | Three sends: signature, identity metadata, usage. A later done item that adds `contentText` makes four: signature, text, identity metadata, usage |
+| ignoredEventsProduceNoSends | `.contentPartAdded`, `.outputItemDone` for an empty message | No channel events beyond the completion usage when completion is present. `.responseCreated` is not an ignored no-send event |
+| outputTextDeltaDoesNotAppendAgain | `.contentPartDelta("Hello")`, `.outputTextDelta` with the same delta, `.outputTextDone("Hello")`, `.responseCompleted` | Three sends: the content delta, identity metadata, and the usage update |
+| reasoningDeltaAppendsOnce | `.reasoningDelta("think")`, `.reasoningDone("think")`, `.responseCompleted` | Three sends: one reasoning append, identity metadata, and the usage update |
 | refusalDoneThrowsRefusal | `.refusalDone("no")` | Throws `LanguageModelError.refusal` |
-| functionCallDoneSuppliesArguments | `.outputItemAdded` function call with empty arguments, then `.outputItemDone` with `{"message":"hi"}`, no deltas | Three channel sends: open, arguments, usage |
-| reasoningDoneSuppliesContent | `.outputItemAdded` reasoning with no summary, then `.outputItemDone` with content text | Two channel sends: reasoning append and usage |
+| functionCallDoneSuppliesArguments | `.outputItemAdded` function call with empty arguments, then `.outputItemDone` with `{"message":"hi"}`, no deltas, then `.responseCompleted` | Four channel sends: open, arguments, identity metadata, usage |
+| reasoningDoneSuppliesContent | `.outputItemAdded` reasoning with no summary, then `.outputItemDone` with content text, then `.responseCompleted` | Three channel sends: reasoning append, identity metadata, usage |
 
 ---
 
@@ -215,6 +223,7 @@ Test `EventTranslator.translate(_:into:)` by constructing a `StreamEvent` stream
 2. **OpenResponsesModelTests** — validates capability mapping used by RequestBuilder
 3. **RequestBuilderTests** — bulk of coverage, depends on fixture construction patterns
 4. **EventTranslatorTests** — most complex async patterns, built last
+5. **OpenResponsesExecutorTests** — `warmRequest` header and timeout rules, and `prewarm` returning in under one second against `http://192.0.2.1/v1/responses`
 
 ---
 

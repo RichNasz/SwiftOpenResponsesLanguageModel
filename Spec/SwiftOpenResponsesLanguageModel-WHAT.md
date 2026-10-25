@@ -119,6 +119,8 @@ for try await partial in stream {
 - [ ] Reasoning effort is only sent to models where `reasoning` is `true`
 - [ ] Structured output is only applied where `structuredOutput` is `true`
 - [ ] Image attachments (`Attachment<ImageAttachmentContent>`) in prompts are converted to `input_image` content parts with base64 data URIs
+- [ ] A non-empty image attachment label is sent as `input_text` immediately before that image
+- [ ] Session `metadata` and the generation request id are copied onto `ResponseRequest.metadata`
 - [ ] `.apiKey` auth routes requests with correct `Authorization: Bearer` header
 - [ ] `.proxied` auth passes an empty API key and forwards the provided custom headers to `LLMClient`
 - [ ] `.apiKey` auth passes no custom headers

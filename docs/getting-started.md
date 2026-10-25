@@ -160,7 +160,7 @@ for try await partial in stream {
 }
 ```
 
-Images are JPEG-encoded at 0.8 quality and sent as base64 data URIs. See [Examples/visionOS/visionOSExamplesApp/Examples/ImageInputView.swift](../Examples/visionOS/visionOSExamplesApp/Examples/ImageInputView.swift) for a complete app with PhotosPicker integration.
+Images are JPEG-encoded at 0.8 quality and sent as base64 data URIs. A non-empty attachment label is sent as text immediately before that image. See [Examples/visionOS/visionOSExamplesApp/Examples/ImageInputView.swift](../Examples/visionOS/visionOSExamplesApp/Examples/ImageInputView.swift) for a complete app with PhotosPicker integration.
 
 ## 7. Reasoning
 
@@ -187,3 +187,7 @@ print(reasoning.joined(separator: "\n\n"))
 ```
 
 Reasoning levels: `.light`, `.moderate`, `.deep`. See [Examples/visionOS/visionOSExamplesApp/Examples/ReasoningView.swift](../Examples/visionOS/visionOSExamplesApp/Examples/ReasoningView.swift) for a complete app.
+
+## 8. Limits
+
+This adapter does not invent values for FoundationModels features that the Open Responses API or its clients cannot carry. Some limits are characteristics of the [Open Responses specification](https://www.openresponses.org/specification). Others are defined by that spec and not yet implemented by SwiftOpenResponsesDSL. The full list, with the reason for each gap, is in the Not available section of [AGENTS.md](../AGENTS.md).

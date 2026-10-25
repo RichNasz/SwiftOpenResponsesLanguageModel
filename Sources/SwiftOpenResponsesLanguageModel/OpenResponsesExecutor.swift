@@ -71,6 +71,33 @@ public struct OpenResponsesExecutor: LanguageModelExecutor {
 		)
 	}
 
+	/// Opens a connection to the endpoint without starting a generation.
+	///
+	/// The transcript is ignored. This resumes a `GET` on `URLSession.shared` and returns
+	/// immediately. `LLMClient` keeps its own session, so this warms a different pool
+	/// to the same host. Failures are ignored.
+	public func prewarm(model: OpenResponsesLanguageModel, transcript: Transcript) {
+		let request = Self.warmRequest(configuration: configuration)
+		URLSession.shared.dataTask(with: request).resume()
+	}
+
+	static func warmRequest(configuration: Configuration) -> URLRequest {
+		var request = URLRequest(url: configuration.baseURL)
+		request.httpMethod = "GET"
+		let interval = min(configuration.timeout, 5)
+		request.timeoutInterval = interval > 0 ? interval : 5
+		switch configuration.authMode {
+		case .apiKey(let key):
+			let token = key.isEmpty ? "lm-studio" : key
+			request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+		case .proxied:
+			for (name, value) in configuration.customHeaders {
+				request.setValue(value, forHTTPHeaderField: name)
+			}
+		}
+		return request
+	}
+
 	/// Streams a generation response from the remote endpoint into the FoundationModels channel.
 	///
 	/// - Parameters:
@@ -92,7 +119,8 @@ public struct OpenResponsesExecutor: LanguageModelExecutor {
 			let translator = EventTranslator()
 			try await translator.translate(
 				client.stream(built.request),
-				into: channel
+				into: channel,
+				fallbackModelID: configuration.model.id
 			)
 		} catch {
 			throw ErrorMapper.map(error)

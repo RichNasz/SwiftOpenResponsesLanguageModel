@@ -46,8 +46,10 @@ Sources/SwiftOpenResponsesLanguageModel/
 
 1. Calls `RequestBuilder.build(from:model:)` to produce a `ResponseRequest`
 2. Creates `EventTranslator()` with fresh UUID entry IDs
-3. Streams via `client.stream(built.request)` and feeds events to the channel
+3. Streams via `client.stream(built.request)` and feeds events to the channel, passing `fallbackModelID: configuration.model.id`
 4. Any error is passed through `ErrorMapper.map(_:)` before re-throwing
+
+**Prewarm** — `prewarm(model:transcript:)` does not generate and ignores the transcript. `OpenResponsesExecutor.warmRequest(configuration:)` builds a `GET` `URLRequest` for `configuration.baseURL`. `timeoutInterval` is `min(configuration.timeout, 5)` when that value is greater than 0, otherwise 5. `.apiKey(key)` sets `Authorization: Bearer <key>`; an empty key uses `lm-studio`. `.proxied` copies `configuration.customHeaders` and sets no `Authorization`. `prewarm` resumes `URLSession.shared.dataTask(with:)` and returns without awaiting. `LLMClient`'s session is private, so this warms a different connection pool to the same host. Errors are ignored.
 
 ---
 
@@ -64,23 +66,24 @@ Sources/SwiftOpenResponsesLanguageModel/
 | `.response(r)` | `.message(InputMessage(role: .assistant, content: .text(...)))` | Skipped if text is empty |
 | `.toolCalls(calls)` | `.functionCall(FunctionCallItem(...))` one per call | Uses `call.id` for both `id` and `callId`; `call.toolName` for `name`; `call.arguments.jsonString` for arguments |
 | `.toolOutput(out)` | `.functionCallOutput(FunctionCallOutputItem(callId: out.id, output: ...))` | Falls back to `"{}"` if text is empty |
-| `.reasoning` | (skipped) | Reasoning history is not re-sent to the model |
+| `.reasoning` | (skipped) | Reasoning history is not re-sent. DSL `InputItem` has no reasoning case, so the signature cannot be replayed either |
 
 ### Segment → Content Part Translation
 
 `segmentsToText()` — joins non-nil segment content with `"\n"`:
 - `.text(t)` → `t.content`
 - `.structure(s)` → `s.content.jsonString`
-- `.attachment`, `.custom` → skipped (images cannot be represented as plain text)
+- `.attachment` → skipped (images cannot be represented as plain text)
 
-`segmentsToContentParts()` — produces `[InputContentPart]`:
+`segmentsToContentParts()` — produces `[InputContentPart]`. One attachment may contribute two parts:
 - `.text(t)` (non-empty) → `.inputText(t.content)`
 - `.structure(s)` → `.inputText(s.content.jsonString)`
 - `.attachment(a)` → dispatches on `a.content`:
   - `.image(img)` with a non-file URL → `.inputImage(url: img.url.absoluteString, detail: nil)` (remote URLs are passed directly)
   - `.image(img)` otherwise → JPEG-encodes `img.cgImage` via `CGImageDestination` at 0.8 quality, then base64-encodes into a `data:image/jpeg;base64,...` data URI → `.inputImage(url: dataURI, detail: nil)`
-  - Returns `nil` if JPEG encoding fails
-- `.custom` → skipped
+  - If `a.label` is non-nil and non-empty, `.inputText(label)` is emitted immediately before that image part
+  - If the image cannot be encoded, neither the image nor its label is emitted
+  - `detail` stays `nil`. Image orientation is not sent; `InputContentPart` has no field for it
 
 `cgImageToDataURI(_:)` — helper that writes a `CGImage` to an in-memory JPEG via ImageIO's `CGImageDestinationCreateWithData`, base64-encodes the result, and returns a `data:image/jpeg;base64,...` string. Returns `nil` on encoding failure.
 
@@ -125,8 +128,8 @@ Passed directly when set; omitted if nil (server default applies).
 | `SamplingMode` | Effect |
 |---|---|
 | `.greedy` | Forces `temperature = 0` |
-| `.nucleus(t, _)` | Sets `topP = t` |
-| `.top` / `nil` | No override |
+| `.randomProbabilityThreshold(t, _)` | Sets `topP = t`. The seed is dropped |
+| `.randomTopK` / `nil` | No override. `ResponseRequest` has no top-k or seed field |
 
 ### Reasoning (guarded by `model.capabilities.reasoning`)
 
@@ -138,6 +141,14 @@ Passed directly when set; omitted if nil (server default applies).
 | `.custom(let level)` | `ReasoningEffort(rawValue: level)` |
 
 Applied as `ReasoningConfig(effort: effort, summary: .auto)`.
+
+### Request metadata
+
+After the request fields above are applied, `RequestBuilder.wireMetadata(from:)` sets `responseRequest.metadata` on every request.
+
+`RequestBuilder.wireMetadataValue(_:)` turns each `GeneratedContent` into a string. It parses `jsonString` with `JSONSerialization` and `.fragmentsAllowed`. A top-level JSON string is sent as that string, without quotes. Any other JSON value is sent as `jsonString` unchanged.
+
+`wireMetadata` copies those pairs, then sets `request_id` to `request.id.uuidString` only when that key is absent. A caller-supplied `request_id` is kept.
 
 ### Structured Output (guarded by `model.capabilities.structuredOutput`)
 
@@ -165,8 +176,10 @@ Translates `AsyncThrowingStream<StreamEvent, Error>` into `LanguageModelExecutor
 State tracked across events:
 - `activeFunctionCalls: [Int: (id: String, name: String)]` — keyed by output item index
 - `argumentDeltasApplied: Set<Int>` — indexes that already received argument deltas
-- `reasoningEntryID: String?` — lazily created on first reasoning event
+- `reasoningEntryID: String?` — lazily created on the first reasoning text or signature. A signature alone does not set `sentReasoningText`
 - `sentReasoningText: Bool` — a reasoning append already happened for this generation
+- `sentReasoningSignature: Bool` — encrypted reasoning content was already forwarded
+- `sentResponseMetadata: Bool` — response identity metadata was already sent
 - `sentCompletion: Bool` — tracks whether `responseCompleted` was received
 
 ### StreamEvent → Channel Action Mapping
@@ -176,16 +189,17 @@ State tracked across events:
 | `.contentPartDelta(delta, _, _)` | `.response(entryID: responseEntryID, action: .appendText(delta, tokenCount: 0))` |
 | `.functionCallArgumentsDelta(delta, callId, index)` | If `activeFunctionCalls[index]` exists, sends `.toolCalls(entryID: toolCallsEntryID, action: .toolCall(id: callId, name: name, action: .appendArguments(delta, tokenCount: 0)))`; otherwise buffers the delta in `pendingArgumentDeltas[index]` until the corresponding `.outputItemAdded` arrives |
 | `.outputItemAdded(.functionCall(call), index)` | Stores `(id: call.callId, name: call.name)` in `activeFunctionCalls[index]`; sends `.toolCalls` with `.appendArguments("", tokenCount: 0)` to open the entry; flushes any `pendingArgumentDeltas[index]` with the now-known tool name |
-| `.outputItemAdded(.reasoning(reasoning), _)` | Creates `reasoningEntryID` (new UUID); sends `.reasoning` with `reasoning.summaryText` if non-nil and non-empty. Sets `sentReasoningText` |
+| `.outputItemAdded(.reasoning(reasoning), _)` | Creates `reasoningEntryID` (new UUID) when sending text; sends `.reasoning` with `reasoning.summaryText` if non-nil and non-empty. Sets `sentReasoningText`. Then forwards `encryptedContent` once (see below) |
 | `.outputItemDone(.functionCall(call), index)` | If `argumentDeltasApplied` does not contain `index` and `call.arguments` is non-empty, appends those arguments. Servers such as LM Studio put the finished arguments here and omit `call_id` on the delta events, which the DSL then drops |
-| `.outputItemDone(.reasoning(reasoning), _)` | If `sentReasoningText` is false, appends `summaryText` when it is non-empty, otherwise `contentText`. This is the completed reasoning item when the server sent no summary and no reasoning deltas |
+| `.outputItemDone(.reasoning(reasoning), _)` | If `sentReasoningText` is false, appends `summaryText` when it is non-empty, otherwise `contentText`. This is the completed reasoning item when the server sent no summary and no reasoning deltas. Then forwards `encryptedContent` once if it was not already sent |
 | `.reasoningSummaryPartAdded(part, _, _)` | Uses existing `reasoningEntryID` or creates one lazily (handles providers that emit this event without a prior `.outputItemAdded(.reasoning)`); sends `.reasoning(entryID:, action: .appendText(part.text, tokenCount: 0))` |
-| `.responseCompleted(response)` | Extracts `inputTokens`, `outputTokens`, `inputTokensDetails.cachedTokens`, and `outputTokensDetails.reasoningTokens` from `response.usage`; sends `.response(entryID: responseEntryID, action: .updateUsage(...))` with these counts (defaulting to 0 for absent fields); sets `sentCompletion = true` |
+| `.responseCreated(response)` | Sends `.response(entryID: responseEntryID, action: .updateMetadata)` from `responseIdentityMetadata(model:fallbackModelID:responseID:)`. `response_id` is `response.id`. `model` is `response.model` when non-empty, otherwise `fallbackModelID` when non-empty, otherwise omitted. Sets `sentResponseMetadata` |
+| `.responseCompleted(response)` | If `sentResponseMetadata` is false, sends the same identity metadata. Then extracts `inputTokens`, `outputTokens`, `inputTokensDetails.cachedTokens`, and `outputTokensDetails.reasoningTokens` from `response.usage`; sends `.response(entryID: responseEntryID, action: .updateUsage(...))` with these counts (defaulting to 0 for absent fields); sets `sentCompletion = true` |
 | `.responseFailed(response)` | Throws `OpenResponsesError.apiError(code: error.code, message: error.message)` |
 | `.error(message)` | Throws `OpenResponsesError.streamError(message)` |
 | `.outputTextDelta` | Ignored. The parser also yields `.contentPartDelta` for the same `response.output_text.delta`, and that case already appended the text. |
 | `.outputTextDone` | Ignored. The payload is the full text, which the deltas already streamed. |
-| `.outputTextAnnotationAdded` | Ignored. Citations are not forwarded. |
+| `.outputTextAnnotationAdded` | If `annotation` is nil, ignored. Otherwise one `.updateMetadata` from `annotationMetadata(annotation:outputIndex:contentIndex:annotationIndex:)`. Keys are `annotation.<outputIndex>.<contentIndex>.<annotationIndex>.type`, plus `.url`, `.title`, `.start_index`, and `.end_index` for each non-nil field. Index numbers are decimal strings. There is no citation channel action |
 | `.refusalDelta` | Ignored. The completed refusal is the error. |
 | `.refusalDone(refusal, ...)` | Throws `LanguageModelError.refusal(.init(explanation: refusal, debugDescription: refusal))` |
 | `.reasoningDelta(delta, ...)` | Appends `delta` to the reasoning channel. Reuses `reasoningEntryID` when one already exists, otherwise creates it. |
@@ -196,6 +210,10 @@ State tracked across events:
 `.outputTextDelta` must not append. SwiftOpenResponsesDSL yields it in addition to `.contentPartDelta` when the event includes `item_id` and `sequence_number`, and both carry the same delta.
 
 `.reasoningSummaryPartAdded` and `.outputItemAdded(.reasoning)` stay as they are. A server that puts the full summary in `reasoning_summary_part.added` and also emits `reasoning_summary_text.delta` can duplicate reasoning text.
+
+**Reasoning signature** — on `.outputItemAdded(.reasoning)` and `.outputItemDone(.reasoning)`, a non-empty `encryptedContent` is forwarded once per generation. `signatureData(encryptedContent:)` returns nil for an empty string. Otherwise it uses `Data(base64Encoded:)` when that returns data, and UTF-8 bytes when it does not. The translator ensures `reasoningEntryID` exists without setting `sentReasoningText`, then sends `.reasoning(entryID:, action: .updateSignature(data, tokenCount: 0))` and sets `sentReasoningSignature`. A later reasoning item in the same generation does not send another signature.
+
+`translate(_:into:fallbackModelID:)` takes `fallbackModelID: String = ""`. The executor passes `configuration.model.id`.
 
 **Resilience fallback** — after the stream ends, if `sentCompletion == false`, sends a zero-usage update to close the generation cleanly (required when providers never emit `response.completed`).
 
@@ -218,3 +236,11 @@ State tracked across events:
 ## Entry ID Generation
 
 `EventTranslator` holds two string entry IDs (`responseEntryID`, `toolCallsEntryID`), defaulting to freshly generated UUIDs. The executor creates a new `EventTranslator` for each `respond()` call, ensuring IDs are unique across consecutive calls in a long session. The parameters accept explicit strings so tests can inject deterministic IDs and make stable assertions on entry identity.
+
+---
+
+## Not represented
+
+Do not invent values for FoundationModels behavior this package does not translate. The list, the reason each item stays unimplemented, and whether the limit is the Open Responses API, the DSL, or this package live in `Spec/DocumentationSpec.md` under "Limits". The API spec is <https://www.openresponses.org/specification> (OpenAPI `2026-04-24`). A behavior that spec does not define is a characteristic of Open Responses, not a SwiftOpenResponsesDSL bug. That section is the inventory the generated docs publish. Do not keep a second list here.
+
+`previous_response_id` and `prompt_cache_key` already exist on `ResponseRequest` and stay unset on purpose. Tool `strict` stays gated on `structuredOutput` on purpose. Those are choices of this package, not missing DSL fields.

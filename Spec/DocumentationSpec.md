@@ -168,9 +168,13 @@ Show how to enable extended thinking for models with `reasoning: true`. Must dem
 
 Reference `ReasoningView.swift` for a complete example.
 
+### 8. Limits
+
+After reasoning. Two or three sentences: the adapter does not invent values for FoundationModels features the wire protocol or its dependencies cannot carry. Link to the Not available section of `AGENTS.md` for the list. Do not repeat the table.
+
 ### Constraints
 
-- Each section must include at least one complete, compilable code block
+- Each section must include at least one complete, compilable code block, except Limits, which is a pointer and has no code
 - Each section builds on the previous — later sections can reference concepts from earlier ones without re-explaining
 - No more than 2-3 sentences of explanation per code block — let the code speak
 - Link to specific example app files for complete app implementations rather than reproducing full app code
@@ -254,6 +258,8 @@ Key decision: capability flags are declared per-model at init time, not auto-det
 
 - **SwiftOpenResponsesDSL** — provides `LLMClient`, `ResponseRequest`, `StreamEvent`, streaming protocol
 - **SwiftLLMToolMacros** (transitive) — provides `JSONSchema` types for tool definitions
+
+Point at the Limits section below before adding a FoundationModels behavior this package does not already translate. That section names which dependency has to change. Do not repeat the table here.
 
 ### Spec Files
 
@@ -355,6 +361,10 @@ Must use correct current API signatures:
 - `OpenResponsesLanguageModel(name:auth:baseURL:timeout:)` — note the `name:` label takes `OpenResponsesModel`
 - `AuthMode.apiKey(_:)` or `AuthMode.proxied(headers:)`
 
+### Not available
+
+Required section, after Common Mistakes. It is the user-facing copy of the Limits table in this spec. For each row: the behavior a caller might expect, why this package does not provide it, and the Open Responses fact from the Where the limit is column. When that column names the API, say the limit is a characteristic of Open Responses and not a bug in SwiftOpenResponsesDSL. When it names the DSL, say the Open Responses spec already allows the behavior and the client has not implemented it. Do not add workarounds that invent server data. Do not duplicate the table in the getting-started guide.
+
 ### Constraints
 
 - For consumers, not contributors (architecture details belong in CLAUDE.md)
@@ -441,6 +451,52 @@ public enum AuthMode: Sendable, Hashable {
 
 ---
 
+## 8. Limits
+
+**Purpose:** One inventory of FoundationModels behavior this package does not provide. Generated docs take their wording from this section. `Spec/SwiftOpenResponsesLanguageModel-HOW.md` follows it and must not grow a second list.
+
+**Where it is published:**
+
+- `AGENTS.md` section "Not available" carries every row, in the order below, for people and for AI tools using the package.
+- `docs/getting-started.md` section "Limits" is a short pointer to that section. It does not repeat the rows.
+- `CLAUDE.md` tells contributors to read this section before translating a new Apple API, and does not repeat the rows.
+
+**Rules for every row:**
+
+- Say what the caller does not get.
+- Say why this package leaves it unimplemented. "Not implemented" without a reason is not enough.
+- Name where the limit lives. A dependency on SwiftOpenResponsesDSL is also a dependency on the Open Responses API. The site is <https://www.openresponses.org/>. The normative spec for this inventory is <https://www.openresponses.org/specification>, OpenAPI `info.version` `2026-04-24` at <https://www.openresponses.org/openapi/openapi.json>.
+- If that spec does not define the behavior, the row says so and calls it a characteristic of the Open Responses API. Do not describe that absence as a SwiftOpenResponsesDSL bug, and do not ask the DSL to add a field the spec does not have.
+- If that spec defines the behavior and the DSL does not implement it, the row says the API allows it and names the DSL type that is missing. The DSL is the code gap. The API is not.
+- "This package" means the spec and the DSL already allow the behavior and this adapter chooses not to send it, or can change its own code.
+- Do not promise a fix inside this package for a row whose next change is another package, the Open Responses spec, or a future Apple SDK.
+
+Checked against that OpenAPI file, SwiftOpenResponsesDSL `Spec/Unimplemented.md` and `ResponseRequest` / `LLMError` at revision `728851b`, `JSONSchemaValue` in SwiftLLMToolMacros, and the FoundationModels swiftinterface shipped with Xcode 27.1.
+
+| Gap | Why it stays unimplemented | Where the limit is |
+|---|---|---|
+| Replaying `Transcript.Entry.reasoning` and its signature on a later turn | The entry is skipped. Rejecting it as unsupported transcript content would fail multi-turn reasoning sessions that already work. The signature stored on the way out is not sent back. | **Open Responses allows this.** `ItemParam` includes `ReasoningItemParam` (`id`, `type`, `summary`, `content`, `encrypted_content`). Items are defined as bidirectional. **SwiftOpenResponsesDSL does not.** `ReasoningItem` is decode-only, and `InputItem` has no reasoning case. That package's `Spec/Unimplemented.md` names it under "Reasoning item as input". After the DSL can encode the item, this package sends the signature it already stored. |
+| `SamplingMode.randomTopK` and sampling seeds | `.randomProbabilityThreshold` sets `top_p` and drops the seed. `.randomTopK` is ignored. | **Characteristic of the Open Responses API.** `CreateResponseBody` has `temperature` and `top_p`. The 2026-04-24 OpenAPI file has no `top_k` and no `seed`. The DSL is not missing a field. Do not add those keys to SwiftOpenResponsesDSL unless the spec adds them. |
+| `previous_response_id` and `prompt_cache_key` | This package still sends the full transcript. Setting either field as well can duplicate the prompt or make the provider reject the turn. The executor does not keep a response id between calls. | **Open Responses defines both** on `CreateResponseBody`. The DSL already has them on `ResponseRequest`. **This package** leaves them unset. That is a turn policy, not a missing API or a missing DSL field. |
+| Per-token `tokenCount` on streamed text, tools, and reasoning | Appends use `0`. The completion usage update carries the real totals. | **Characteristic of the Open Responses API.** Delta events (`response.output_text.delta`, `response.reasoning.delta`, `response.function_call_arguments.delta`) carry the text delta, indexes, and in some cases `logprobs` or `obfuscation`. They do not carry a token count. `Usage` (`input_tokens`, `output_tokens`, `total_tokens`, plus cached and reasoning details) is on the response. The DSL cannot surface a count the events do not have. |
+| `contextSize` and `tokenCount` on HTTP 413, and a rate-limit `resetDate` | The mapper fills zeros and `resetDate: nil`. | **Characteristic of the Open Responses API.** `POST /responses` documents a `200` response. `Error` is `code` and `message`. Streaming `ErrorPayload` adds `type`, `param`, and an untyped `headers` map. The spec defines no context size, no token count on an error, and no reset time. `LLMError.serverError` and `LLMError.rateLimit` match that shape. Do not treat the missing numbers as a DSL omission. Map them only if a later spec version defines them. |
+| `LanguageModelError.guardrailViolation` and `unsupportedLanguageOrLocale` | Mapping a generic provider error onto them would be a guess. | **Characteristic of the Open Responses API.** The 2026-04-24 spec has no guardrail event and no language or locale error. This is not a DSL gap. |
+| Object-level JSON Schema `title`, `description`, and `x-order` | Those keywords are dropped while converting `GenerationSchema`. `additionalProperties: false` is still written. | **Split.** `JsonSchemaResponseFormatParam.schema` is a JSON Schema object with open properties, so `title` and `description` are allowed on the wire. Losing them is **SwiftLLMToolMacros**: `JSONSchemaValue.object` is only `properties` and `required`. **`x-order` is not Open Responses and not JSON Schema.** The spec does not define Apple's property-order extension. `strict: true` also says only a subset of JSON Schema is supported, without listing the subset, so a server may still reject keywords the wire object can carry. |
+| Unknown `GenerationSchema` keywords, including `anyOf`, become a string schema | A hard `unsupportedGenerationGuide` error would reject guided generation for keywords `JSONSchemaValue` cannot carry. | **Not an Open Responses ban.** The schema object is open, so `anyOf` can appear in it. The collapse to `.string()` is **SwiftLLMToolMacros**, whose `JSONSchemaValue` has object, array, string, integer, number, boolean, and null. The spec's only related limit is `strict: true`: "Only a subset of JSON Schema is supported," with the subset unnamed. |
+| Tool `strict: true` whenever tool calling is on | `strict` is set only when `structuredOutput` is on. Servers such as LM Studio rewrite or reject strict schemas, and unconditional strict would break tool calls that work today. | **Open Responses defines `FunctionTool.strict`.** The DSL already has it. **This package** gates it. That is a compatibility choice, not a missing API or DSL field. |
+| `SystemLanguageModel` API: `isAvailable`, `contextSize`, `tokenCount(for:)`, guardrails, adapters, Private Cloud Compute | `LanguageModel` does not require them. | **Not an Open Responses surface.** They belong to Apple's on-device model. The DSL is not expected to grow them. |
+| Data attachments, `supportsDataAttachmentType`, and `supportsDataEntryType` | Segments here are text, structure, and image attachments. | **Open Responses allows file input.** `InputFileContentParam` has `filename`, `file_data` (base64), and `file_url`. The API is not the gap. **FoundationModels in Xcode 27.1** does not include the OS 27.2 data-attachment APIs, so this package has nothing to translate yet. After that SDK ships, the remaining code gap is **SwiftOpenResponsesDSL**, which does not encode `InputFileContent`. Image input already uses `input_image`. |
+| Image orientation | The JPEG is the pixel buffer as handed over. `detail` stays unset. | **Characteristic of the Open Responses API.** `InputImageContent` has `image_url` and `detail` (`low`, `high`, `auto`). It has no orientation. The DSL's `detail` field matches the spec. Apple's `ImageAttachment` has orientation and no detail level, so `detail` is left nil. Baking orientation into the JPEG would be a change in this package's `cgImageToDataURI`. It would not add a field the API does not have. |
+| `prewarm` warming the same connection pool `LLMClient` uses | `prewarm` sends a GET on `URLSession.shared` and returns without waiting. It does not POST a generation. | **Open Responses does not define a prewarm call.** The API's generation call is `POST /responses`. The GET is this package's local choice, not a DSL omission. The private `URLSession` is a **SwiftOpenResponsesDSL** limit on sharing the client's pool. A warm method on `LLMClient` would fix the pool. It would still not be an Open Responses operation. |
+
+### Constraints
+
+- The published "Not available" section stays in this order.
+- A row moves out only when the behavior ships and the spec that describes the shipped behavior is updated in the same change.
+- Length budgets elsewhere in this file do not justify deleting a row. The AGENTS.md budget grows by this section. The five-file total may exceed 450 lines by the length of "Not available" and the getting-started pointer.
+
+---
+
 ## File Changes Summary
 
 **Create:**
@@ -495,3 +551,7 @@ public enum AuthMode: Sendable, Hashable {
 - [ ] Every `public` symbol in `Sources/SwiftOpenResponsesLanguageModel/` has a `///` doc comment (types, inits, properties, enum cases, methods)
 - [ ] AGENTS.md Installation section uses the correct SPM URL (`https://github.com/RichNasz/SwiftOpenResponsesLanguageModel.git`)
 - [ ] AGENTS.md Quick Reference code block uses correct API signatures: `OpenResponsesModel(id:capabilities:)`, `OpenResponsesLanguageModel(name:auth:baseURL:timeout:)`, `AuthMode.apiKey(_:)` / `.proxied(headers:)`
+- [ ] AGENTS.md "Not available" matches the Limits table in this spec: every row, same order, with the reason and the Open Responses fact. A row the API does not define is described as a characteristic of Open Responses, not as a SwiftOpenResponsesDSL bug. A row the API defines and the DSL omits says the spec allows it and names the missing DSL type.
+- [ ] Getting-started "Limits" points at AGENTS.md and does not repeat the table
+- [ ] CLAUDE.md points contributors at the Limits section and does not repeat the table
+- [ ] No Limits row tells this package to invent `top_k`, seed, per-token counts, 413 sizes, rate-limit dates, guardrail errors, or locale errors

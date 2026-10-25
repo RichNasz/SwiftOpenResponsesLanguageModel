@@ -17,30 +17,64 @@ struct EventTranslator: Sendable {
 
 	func translate(
 		_ events: AsyncThrowingStream<StreamEvent, Error>,
-		into channel: LanguageModelExecutorGenerationChannel
+		into channel: LanguageModelExecutorGenerationChannel,
+		fallbackModelID: String = ""
 	) async throws {
 		var activeFunctionCalls: [Int: (id: String, name: String)] = [:]
 		var pendingArgumentDeltas: [Int: [(delta: String, callId: String)]] = [:]
 		var argumentDeltasApplied: Set<Int> = []
 		var reasoningEntryID: String?
 		var sentReasoningText = false
+		var sentReasoningSignature = false
+		var sentResponseMetadata = false
 		var sentCompletion = false
+
+		func ensureReasoningEntryID() -> String {
+			if let existing = reasoningEntryID {
+				return existing
+			}
+			let id = UUID().uuidString
+			reasoningEntryID = id
+			return id
+		}
 
 		func appendReasoning(_ text: String) async {
 			guard !text.isEmpty else { return }
 			sentReasoningText = true
-			let entryID: String
-			if let existing = reasoningEntryID {
-				entryID = existing
-			} else {
-				let id = UUID().uuidString
-				reasoningEntryID = id
-				entryID = id
-			}
 			await channel.send(
 				.reasoning(
-					entryID: entryID,
+					entryID: ensureReasoningEntryID(),
 					action: .appendText(text, tokenCount: 0)
+				)
+			)
+		}
+
+		func sendSignatureIfNeeded(_ encryptedContent: String?) async {
+			guard !sentReasoningSignature,
+				  let encryptedContent,
+				  let data = Self.signatureData(encryptedContent: encryptedContent) else {
+				return
+			}
+			sentReasoningSignature = true
+			await channel.send(
+				.reasoning(
+					entryID: ensureReasoningEntryID(),
+					action: .updateSignature(data, tokenCount: 0)
+				)
+			)
+		}
+
+		func sendResponseIdentity(_ response: ResponseObject) async {
+			guard !sentResponseMetadata else { return }
+			sentResponseMetadata = true
+			await channel.send(
+				.response(
+					entryID: responseEntryID,
+					action: .updateMetadata(Self.metadataPayload(Self.responseIdentityMetadata(
+						model: response.model,
+						fallbackModelID: fallbackModelID,
+						responseID: response.id
+					)))
 				)
 			)
 		}
@@ -108,6 +142,7 @@ struct EventTranslator: Sendable {
 					if let summaryText = reasoning.summaryText {
 						await appendReasoning(summaryText)
 					}
+					await sendSignatureIfNeeded(reasoning.encryptedContent)
 
 				default:
 					break
@@ -136,6 +171,7 @@ struct EventTranslator: Sendable {
 							await appendReasoning(contentText)
 						}
 					}
+					await sendSignatureIfNeeded(reasoning.encryptedContent)
 				default:
 					break
 				}
@@ -157,7 +193,25 @@ struct EventTranslator: Sendable {
 					.init(explanation: refusal, debugDescription: refusal)
 				)
 
+			case .responseCreated(let response):
+				await sendResponseIdentity(response)
+
+			case .outputTextAnnotationAdded(let annotation, let index, let contentIndex, let annotationIndex, _, _):
+				guard let annotation else { break }
+				await channel.send(
+					.response(
+						entryID: responseEntryID,
+						action: .updateMetadata(Self.metadataPayload(Self.annotationMetadata(
+							annotation: annotation,
+							outputIndex: index,
+							contentIndex: contentIndex,
+							annotationIndex: annotationIndex
+						)))
+					)
+				)
+
 			case .responseCompleted(let response):
+				await sendResponseIdentity(response)
 				let inputTokens = response.usage?.inputTokens ?? 0
 				let outputTokens = response.usage?.outputTokens ?? 0
 				let cachedTokens = response.usage?.inputTokensDetails?.cachedTokens ?? 0
@@ -191,10 +245,10 @@ struct EventTranslator: Sendable {
 			case .error(let message):
 				throw OpenResponsesError.streamError(message)
 
-			case .responseCreated, .responseInProgress, .contentPartAdded,
+			case .responseInProgress, .contentPartAdded,
 				 .contentPartDone, .functionCallArgumentsDone,
 				 .responseQueued, .responseIncomplete,
-				 .outputTextDelta, .outputTextDone, .outputTextAnnotationAdded,
+				 .outputTextDelta, .outputTextDone,
 				 .refusalDelta, .reasoningDone, .reasoningSummaryTextDone:
 				break
 			}
@@ -214,5 +268,59 @@ struct EventTranslator: Sendable {
 				)
 			)
 		}
+	}
+
+	static func responseIdentityMetadata(
+		model: String,
+		fallbackModelID: String,
+		responseID: String
+	) -> [String: String] {
+		var values = ["response_id": responseID]
+		let chosen = model.isEmpty ? fallbackModelID : model
+		if !chosen.isEmpty {
+			values["model"] = chosen
+		}
+		return values
+	}
+
+	static func annotationMetadata(
+		annotation: Annotation,
+		outputIndex: Int,
+		contentIndex: Int,
+		annotationIndex: Int
+	) -> [String: String] {
+		let prefix = "annotation.\(outputIndex).\(contentIndex).\(annotationIndex)"
+		var values = ["\(prefix).type": annotation.type]
+		if let url = annotation.url {
+			values["\(prefix).url"] = url
+		}
+		if let title = annotation.title {
+			values["\(prefix).title"] = title
+		}
+		if let startIndex = annotation.startIndex {
+			values["\(prefix).start_index"] = String(startIndex)
+		}
+		if let endIndex = annotation.endIndex {
+			values["\(prefix).end_index"] = String(endIndex)
+		}
+		return values
+	}
+
+	static func signatureData(encryptedContent: String) -> Data? {
+		guard !encryptedContent.isEmpty else { return nil }
+		if let decoded = Data(base64Encoded: encryptedContent) {
+			return decoded
+		}
+		return Data(encryptedContent.utf8)
+	}
+
+	private static func metadataPayload(
+		_ values: [String: String]
+	) -> [String: any ConvertibleToGeneratedContent] {
+		var payload: [String: any ConvertibleToGeneratedContent] = [:]
+		for (key, value) in values {
+			payload[key] = value
+		}
+		return payload
 	}
 }

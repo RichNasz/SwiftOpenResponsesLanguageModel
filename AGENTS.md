@@ -150,6 +150,36 @@ do {
 4. **On-device assumptions** — Remote providers have different latency, token limits, and error patterns compared to on-device models.
 5. **Stream event ordering** — Local LLM servers may emit events in a different order than hosted APIs. The `EventTranslator` buffers `functionCallArgumentsDelta` events that arrive before `outputItemAdded` and handles streams that end without `response.completed`. Don't assume canonical event ordering when modifying stream handling.
 
+## Not available
+
+FoundationModels behavior this package does not provide. Do not invent stand-in values. The Open Responses spec is [openresponses.org/specification](https://www.openresponses.org/specification) (OpenAPI `2026-04-24`). When the spec does not define a behavior, that is a characteristic of the API, not a bug in SwiftOpenResponsesDSL. When the spec defines it and the DSL does not implement it, the API is not the gap.
+
+1. **Reasoning is not sent back on the next turn.** A reasoning transcript entry and its signature are skipped. Treating them as unsupported content would break multi-turn reasoning that already works. Open Responses allows this: `ReasoningItemParam` is an input item. SwiftOpenResponsesDSL does not encode it. `ReasoningItem` is decode-only, and `InputItem` has no reasoning case.
+
+2. **Top-k sampling and sampling seeds are dropped.** `.randomProbabilityThreshold` sends `top_p` and drops the seed. `.randomTopK` is ignored. This is a characteristic of Open Responses. `CreateResponseBody` has `temperature` and `top_p` and has no `top_k` or `seed`. The DSL is not missing those fields.
+
+3. **`previous_response_id` and `prompt_cache_key` are not sent.** The package sends the full transcript every turn. Setting either field as well can duplicate the prompt. Open Responses defines both, and the DSL already has them on `ResponseRequest`. Leaving them unset is this package's turn policy.
+
+4. **Streamed fragments do not carry a token count.** Appends use `0`. Totals arrive with the completed response. This is a characteristic of Open Responses. Text, reasoning, and tool-argument deltas do not include a token count. `Usage` is on the completed response. The DSL cannot report a count the events do not have.
+
+5. **HTTP 413 has no real context size or token count, and rate limits have no reset date.** The mapped errors use zeros and `resetDate: nil`. This is a characteristic of Open Responses. `Error` is `code` and `message`. The spec defines no context size, no error token count, and no reset time. Do not treat that as a DSL omission.
+
+6. **Guardrail and locale errors are not produced.** Guessing them from a generic provider error would be wrong. This is a characteristic of Open Responses. The spec has no guardrail event and no language or locale error.
+
+7. **Object schema `title`, `description`, and `x-order` are not copied.** `additionalProperties: false` is still sent. Open Responses accepts an open JSON Schema object, so `title` and `description` are allowed on the wire. Dropping them is SwiftLLMToolMacros: `JSONSchemaValue.object` is only properties and required fields. `x-order` is not Open Responses and not JSON Schema. With `strict: true`, the spec says only an unnamed subset of JSON Schema is supported, so a server may reject keywords the object can carry.
+
+8. **Unknown schema keywords, including `anyOf`, become a string schema.** Open Responses does not forbid `anyOf`. The schema object is open. The collapse is SwiftLLMToolMacros, whose `JSONSchemaValue` has no `anyOf`. The spec only warns that `strict: true` supports a subset of JSON Schema.
+
+9. **Tool `strict: true` is not always sent.** It is set only when `structuredOutput` is on. Some servers rewrite or reject strict schemas. Open Responses defines `FunctionTool.strict`, and the DSL already has it. The gate is a compatibility choice in this package.
+
+10. **On-device-only `SystemLanguageModel` API is absent.** That includes `isAvailable`, `contextSize`, `tokenCount(for:)`, guardrails, adapters, and Private Cloud Compute. `LanguageModel` does not require them. They are not an Open Responses surface, and the DSL is not expected to grow them.
+
+11. **Data attachments are not sent.** Segments are text, structure, and images. Open Responses allows file input through `InputFileContentParam` (`filename`, `file_data`, `file_url`). The API is not the gap. The FoundationModels interface in Xcode 27.1 does not include the OS 27.2 data-attachment APIs. After that SDK ships, SwiftOpenResponsesDSL still has to encode `InputFileContent`. Image input already uses `input_image`.
+
+12. **Image orientation is not applied.** The JPEG is the pixel buffer as handed over, and `detail` stays unset. This is a characteristic of Open Responses. `InputImageContent` has `image_url` and `detail` (`low`, `high`, `auto`) and no orientation. The DSL matches that. Apple's image attachment has orientation and no detail level. A non-empty attachment label is sent as text immediately before the image.
+
+13. **`prewarm` does not warm `LLMClient`'s connection pool.** It sends a GET on a shared session and returns without waiting. It does not generate. Open Responses does not define a prewarm call. Generation is `POST /responses`. The GET is this package's choice. The client's session is private in SwiftOpenResponsesDSL, so the GET uses a different pool to the same host.
+
 ## Quick Reference
 
 Complete happy-path example — copy, paste, fill in your provider details:

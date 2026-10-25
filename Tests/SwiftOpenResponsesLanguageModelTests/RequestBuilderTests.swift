@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import CoreGraphics
 import FoundationModels
 import SwiftOpenResponsesDSL
 @testable import SwiftOpenResponsesLanguageModel
@@ -10,22 +11,24 @@ struct RequestBuilderTests {
 	// MARK: - Helpers
 
 	private func buildRequest(
+		id: UUID = UUID(),
 		entries: [Transcript.Entry] = [],
 		tools: [Transcript.ToolDefinition] = [],
 		schema: GenerationSchema? = nil,
 		options: GenerationOptions = GenerationOptions(),
 		contextOptions: ContextOptions = ContextOptions(),
-		capabilities: OpenResponsesModel.Capabilities = .init()
+		capabilities: OpenResponsesModel.Capabilities = .init(),
+		metadata: [String: any ConvertibleToGeneratedContent] = [:]
 	) throws -> ResponseRequest {
 		let transcript = Transcript(entries: entries)
 		let request = LanguageModelExecutorGenerationRequest(
-			id: UUID(),
+			id: id,
 			transcript: transcript,
 			enabledTools: tools,
 			schema: schema,
 			generationOptions: options,
 			contextOptions: contextOptions,
-			metadata: [:]
+			metadata: metadata
 		)
 		let model = OpenResponsesModel(id: "test-model", capabilities: capabilities)
 		return try RequestBuilder.build(from: request, model: model).request
@@ -300,5 +303,66 @@ struct RequestBuilderTests {
 			entries: [.prompt(Transcript.Prompt(segments: [textSegment("Hi")]))]
 		)
 		#expect(request.stream == true)
+	}
+
+	// MARK: - Metadata and image labels
+
+	@Test func metadataSendsDecodedStringsAndRequestID() throws {
+		let id = UUID(uuidString: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE")!
+		let request = try buildRequest(id: id, metadata: ["suite": "live"])
+		#expect(request.metadata?["suite"] == "live")
+		#expect(request.metadata?["request_id"] == id.uuidString)
+	}
+
+	@Test func callerRequestIDIsKept() throws {
+		let request = try buildRequest(metadata: ["request_id": "caller"])
+		#expect(request.metadata?["request_id"] == "caller")
+	}
+
+	@Test func objectMetadataStaysJSON() throws {
+		let object = GeneratedContent(properties: ["n": "one"])
+		let request = try buildRequest(metadata: ["payload": object])
+		#expect(request.metadata?["payload"] == object.jsonString)
+		#expect(request.metadata?["payload"]?.hasPrefix("{") == true)
+	}
+
+	@Test func labeledImagePrependsTextPart() throws {
+		let space = CGColorSpaceCreateDeviceRGB()
+		let context = try #require(CGContext(
+			data: nil,
+			width: 1,
+			height: 1,
+			bitsPerComponent: 8,
+			bytesPerRow: 0,
+			space: space,
+			bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+		))
+		let image = try #require(context.makeImage())
+		let segment = Transcript.Segment.attachment(
+			.init(content: .image(.init(image)), label: "diagram")
+		)
+		let request = try buildRequest(
+			entries: [.prompt(Transcript.Prompt(segments: [segment]))]
+		)
+		let inputItems = items(from: request)
+		guard case .message(let message) = inputItems.first else {
+			Issue.record("Expected a user message")
+			return
+		}
+		guard case .parts(let parts) = message.content else {
+			Issue.record("Expected content parts")
+			return
+		}
+		#expect(parts.count == 2)
+		guard case .inputText(let label) = parts[0] else {
+			Issue.record("Expected a label text part")
+			return
+		}
+		#expect(label == "diagram")
+		guard case .inputImage(_, let detail) = parts[1] else {
+			Issue.record("Expected an image part")
+			return
+		}
+		#expect(detail == nil)
 	}
 }

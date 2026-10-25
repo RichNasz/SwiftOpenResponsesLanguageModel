@@ -221,7 +221,7 @@ struct EventTranslatorTests {
 			),
 			.responseCompleted(completedResponse())
 		])
-		#expect(count == 2)
+		#expect(count == 3)
 	}
 
 	@Test func reasoningDeltaAppendsOnce() async throws {
@@ -242,7 +242,7 @@ struct EventTranslatorTests {
 			),
 			.responseCompleted(completedResponse())
 		])
-		#expect(count == 2)
+		#expect(count == 3)
 	}
 
 	@Test func functionCallDoneSuppliesArguments() async throws {
@@ -257,7 +257,7 @@ struct EventTranslatorTests {
 			.outputItemDone(.functionCall(done), index: 0),
 			.responseCompleted(completedResponse())
 		])
-		#expect(count == 3)
+		#expect(count == 4)
 	}
 
 	@Test func reasoningDoneSuppliesContent() async throws {
@@ -272,7 +272,7 @@ struct EventTranslatorTests {
 			.outputItemDone(.reasoning(done), index: 0),
 			.responseCompleted(completedResponse())
 		])
-		#expect(count == 2)
+		#expect(count == 3)
 	}
 
 	@Test func refusalDoneThrowsRefusal() async {
@@ -298,6 +298,152 @@ struct EventTranslatorTests {
 	}
 
 	// MARK: - Ignored Events
+
+	@Test func responseIdentityUsesResponseModel() {
+		let values = EventTranslator.responseIdentityMetadata(
+			model: "server",
+			fallbackModelID: "fallback",
+			responseID: "resp-9"
+		)
+		#expect(values["model"] == "server")
+		#expect(values["response_id"] == "resp-9")
+	}
+
+	@Test func responseIdentityUsesFallbackWhenModelEmpty() {
+		let values = EventTranslator.responseIdentityMetadata(
+			model: "",
+			fallbackModelID: "fallback",
+			responseID: "resp-9"
+		)
+		#expect(values["model"] == "fallback")
+		#expect(values["response_id"] == "resp-9")
+	}
+
+	@Test func responseIdentityOmitsEmptyModel() {
+		let values = EventTranslator.responseIdentityMetadata(
+			model: "",
+			fallbackModelID: "",
+			responseID: "resp-9"
+		)
+		#expect(values["model"] == nil)
+		#expect(values["response_id"] == "resp-9")
+	}
+
+	@Test func annotationMetadataUsesIndexes() {
+		let annotation = Annotation(
+			type: "url_citation",
+			startIndex: 1,
+			endIndex: 4,
+			url: "https://example.com",
+			title: "Example"
+		)
+		let values = EventTranslator.annotationMetadata(
+			annotation: annotation,
+			outputIndex: 1,
+			contentIndex: 0,
+			annotationIndex: 2
+		)
+		#expect(values["annotation.1.0.2.type"] == "url_citation")
+		#expect(values["annotation.1.0.2.url"] == "https://example.com")
+		#expect(values["annotation.1.0.2.title"] == "Example")
+		#expect(values["annotation.1.0.2.start_index"] == "1")
+		#expect(values["annotation.1.0.2.end_index"] == "4")
+	}
+
+	@Test func annotationMetadataOmitsNilFields() {
+		let values = EventTranslator.annotationMetadata(
+			annotation: Annotation(type: "file_citation"),
+			outputIndex: 1,
+			contentIndex: 0,
+			annotationIndex: 2
+		)
+		#expect(values["annotation.1.0.2.type"] == "file_citation")
+		#expect(values["annotation.1.0.2.url"] == nil)
+		#expect(values["annotation.1.0.2.title"] == nil)
+	}
+
+	@Test func signatureDataDecodesBase64() {
+		#expect(EventTranslator.signatureData(encryptedContent: "YQ==") == Data("a".utf8))
+	}
+
+	@Test func signatureDataFallsBackToUTF8() {
+		let raw = "not base64!"
+		#expect(EventTranslator.signatureData(encryptedContent: raw) == Data(raw.utf8))
+	}
+
+	@Test func signatureDataEmptyIsNil() {
+		#expect(EventTranslator.signatureData(encryptedContent: "") == nil)
+	}
+
+	@Test func responseCreatedSendsIdentityOnce() async throws {
+		let count = try await sendCount(events: [
+			.responseCreated(completedResponse()),
+			.responseCompleted(completedResponse())
+		])
+		#expect(count == 2)
+	}
+
+	@Test func responseCompletedSendsIdentityWhenCreatedMissing() async throws {
+		let count = try await sendCount(events: [
+			.responseCompleted(completedResponse())
+		])
+		#expect(count == 2)
+	}
+
+	@Test func annotationMetadataIsForwarded() async throws {
+		let annotation = Annotation(type: "url_citation", url: "https://example.com", title: "Example")
+		let count = try await sendCount(events: [
+			.outputTextAnnotationAdded(
+				annotation: annotation,
+				index: 1,
+				contentIndex: 0,
+				annotationIndex: 2,
+				itemId: "item-1",
+				sequenceNumber: 1
+			),
+			.responseCompleted(completedResponse())
+		])
+		#expect(count == 3)
+	}
+
+	@Test func nilAnnotationIsIgnored() async throws {
+		let count = try await sendCount(events: [
+			.outputTextAnnotationAdded(
+				annotation: nil,
+				index: 0,
+				contentIndex: 0,
+				annotationIndex: 0,
+				itemId: "item-1",
+				sequenceNumber: 1
+			),
+			.responseCompleted(completedResponse())
+		])
+		#expect(count == 2)
+	}
+
+	@Test func encryptedReasoningSendsSignatureOnce() async throws {
+		let item = ReasoningItem(id: "r-1", encryptedContent: "YQ==")
+		let count = try await sendCount(events: [
+			.outputItemAdded(.reasoning(item), index: 0),
+			.outputItemDone(.reasoning(item), index: 0),
+			.responseCompleted(completedResponse())
+		])
+		#expect(count == 3)
+	}
+
+	@Test func encryptedReasoningStillAppendsLaterContent() async throws {
+		let added = ReasoningItem(id: "r-1", summary: [], encryptedContent: "YQ==")
+		let done = ReasoningItem(
+			id: "r-1",
+			content: [ReasoningContent(type: "reasoning_text", text: "working")]
+		)
+		let count = try await sendCount(events: [
+			.outputItemAdded(.reasoning(added), index: 0),
+			.outputItemDone(.reasoning(done), index: 0),
+			.responseCompleted(completedResponse())
+		])
+		#expect(count == 4)
+	}
 
 	@Test func ignoredEventsProcessWithoutError() async throws {
 		try await translate(events: [

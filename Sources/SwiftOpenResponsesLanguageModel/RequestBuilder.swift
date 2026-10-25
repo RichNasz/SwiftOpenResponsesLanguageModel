@@ -119,7 +119,7 @@ enum RequestBuilder {
 			switch $0 {
 			case .text(let t): t.content
 			case .structure(let s): s.content.jsonString
-			case .attachment, .custom: nil
+			case .attachment: nil
 			@unknown default: nil
 			}
 		}
@@ -146,8 +146,6 @@ enum RequestBuilder {
 				@unknown default:
 					return nil
 				}
-			case .custom:
-				return nil
 			@unknown default:
 				return nil
 			}
@@ -183,9 +181,9 @@ enum RequestBuilder {
 		switch options.samplingMode?.kind {
 		case .greedy:
 			request.temperature = 0
-		case .nucleus(let threshold, _):
+		case .randomProbabilityThreshold(let threshold, _):
 			request.topP = threshold
-		case .top, nil:
+		case .randomTopK, nil:
 			break
 		@unknown default:
 			break

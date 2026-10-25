@@ -75,7 +75,7 @@ extension OpenResponsesLanguageModel: LanguageModel {
 		if model.capabilities.imageInput { caps.append(.vision) }
 		if model.capabilities.reasoning { caps.append(.reasoning) }
 		if model.capabilities.structuredOutput { caps.append(.guidedGeneration) }
-		return LanguageModelCapabilities(capabilities: caps)
+		return LanguageModelCapabilities(caps)
 	}
 
 	/// The configuration used to construct the executor for each generation request.

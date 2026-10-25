@@ -144,7 +144,7 @@ Applied as `ReasoningConfig(effort: effort, summary: .auto)`.
 Converts `GenerationSchema` → `JSONSchema` via `jsonSchemaFromGenerationSchema()` and sets:
 
 ```swift
-request.text = TextParam(format: .jsonSchema(name: "response", schema: jsonSchema, strict: true))
+request.text = TextParam(format: .jsonSchema(name: "response", schema: jsonSchema, strict: true, description: nil))
 ```
 
 `jsonSchemaFromGenerationSchema()` — encodes the `GenerationSchema` to JSON, then recursively converts the dictionary to `JSONSchema` enum values. Type dispatch:
@@ -179,7 +179,19 @@ State tracked across events:
 | `.responseCompleted(response)` | Extracts `inputTokens`, `outputTokens`, `inputTokensDetails.cachedTokens`, and `outputTokensDetails.reasoningTokens` from `response.usage`; sends `.response(entryID: responseEntryID, action: .updateUsage(...))` with these counts (defaulting to 0 for absent fields); sets `sentCompletion = true` |
 | `.responseFailed(response)` | Throws `OpenResponsesError.apiError(code: error.code, message: error.message)` |
 | `.error(message)` | Throws `OpenResponsesError.streamError(message)` |
+| `.outputTextDelta` | Ignored. The parser also yields `.contentPartDelta` for the same `response.output_text.delta`, and that case already appended the text. |
+| `.outputTextDone` | Ignored. The payload is the full text, which the deltas already streamed. |
+| `.outputTextAnnotationAdded` | Ignored. Citations are not forwarded. |
+| `.refusalDelta` | Ignored. The completed refusal is the error. |
+| `.refusalDone(refusal, ...)` | Throws `LanguageModelError.refusal(.init(explanation: refusal, debugDescription: refusal))` |
+| `.reasoningDelta(delta, ...)` | Appends `delta` to the reasoning channel. Reuses `reasoningEntryID` when one already exists, otherwise creates it. |
+| `.reasoningSummaryTextDelta(delta, ...)` | Same as `.reasoningDelta`. |
+| `.reasoningDone`, `.reasoningSummaryTextDone` | Ignored. They repeat the full text after the deltas. |
 | All others | Ignored |
+
+`.outputTextDelta` must not append. SwiftOpenResponsesDSL yields it in addition to `.contentPartDelta` when the event includes `item_id` and `sequence_number`, and both carry the same delta.
+
+`.reasoningSummaryPartAdded` and `.outputItemAdded(.reasoning)` stay as they are. A server that puts the full summary in `reasoning_summary_part.added` and also emits `reasoning_summary_text.delta` can duplicate reasoning text.
 
 **Resilience fallback** — after the stream ends, if `sentCompletion == false`, sends a zero-usage update to close the generation cleanly (required when providers never emit `response.completed`).
 

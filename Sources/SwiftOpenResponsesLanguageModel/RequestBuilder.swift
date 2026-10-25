@@ -218,7 +218,7 @@ enum RequestBuilder {
 		guard let schema, model.capabilities.structuredOutput else { return }
 		let jsonSchema = jsonSchemaFromGenerationSchema(schema)
 		request.text = TextParam(
-			format: .jsonSchema(name: "response", schema: jsonSchema, strict: true)
+			format: .jsonSchema(name: "response", schema: jsonSchema, strict: true, description: nil)
 		)
 	}
 

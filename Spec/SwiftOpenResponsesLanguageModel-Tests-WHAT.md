@@ -23,7 +23,7 @@ Capability flag defaults, capability mapping to `LanguageModelCapabilities`, and
 
 ### EventTranslator
 
-`EventTranslator.translate(_:into:)` — translates `AsyncThrowingStream<StreamEvent>` into `LanguageModelExecutorGenerationChannel` sends. Covers all handled stream event types, error propagation, the zero-usage fallback for providers that omit `response.completed`, and out-of-order event handling (argument deltas arriving before the tool name is known via `outputItemAdded`).
+`EventTranslator.translate(_:into:)` — translates `AsyncThrowingStream<StreamEvent>` into `LanguageModelExecutorGenerationChannel` sends. Covers all handled stream event types, error propagation, the zero-usage fallback for providers that omit `response.completed`, and out-of-order event handling (argument deltas arriving before the tool name is known via `outputItemAdded`). Duplicate text events (`.outputTextDelta`, `.outputTextDone`) do not append again. `.reasoningDelta` and `.reasoningSummaryTextDelta` append once each. `.refusalDone` throws `LanguageModelError.refusal`.
 
 ## Integration Test Components
 
@@ -68,6 +68,9 @@ macOS 27.0+ (deployment target). No `@available` annotations on test suites — 
 - [ ] EventTranslator: every handled StreamEvent produces the correct channel action
 - [ ] EventTranslator: zero-usage fallback fires when stream ends without `responseCompleted`
 - [ ] EventTranslator: error events throw the correct error types
+- [ ] EventTranslator: `.outputTextDelta` and `.outputTextDone` do not add channel sends beyond `.contentPartDelta`
+- [ ] EventTranslator: `.reasoningDelta` appends once and `.reasoningDone` does not append again
+- [ ] EventTranslator: `.refusalDone` throws `LanguageModelError.refusal`
 - [ ] No live API calls or network dependencies
 
 ### Integration Tests

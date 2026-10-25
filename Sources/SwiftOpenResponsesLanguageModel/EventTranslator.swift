@@ -24,6 +24,23 @@ struct EventTranslator: Sendable {
 		var reasoningEntryID: String?
 		var sentCompletion = false
 
+		func appendReasoning(_ text: String) async {
+			let entryID: String
+			if let existing = reasoningEntryID {
+				entryID = existing
+			} else {
+				let id = UUID().uuidString
+				reasoningEntryID = id
+				entryID = id
+			}
+			await channel.send(
+				.reasoning(
+					entryID: entryID,
+					action: .appendText(text, tokenCount: 0)
+				)
+			)
+		}
+
 		for try await event in events {
 			try Task.checkCancellation()
 
@@ -98,23 +115,21 @@ struct EventTranslator: Sendable {
 				}
 
 			case .reasoningSummaryPartAdded(let part, _, _):
-				let entryID: String
-				if let existing = reasoningEntryID {
-					entryID = existing
-				} else {
-					let id = UUID().uuidString
-					reasoningEntryID = id
-					entryID = id
-				}
-				await channel.send(
-					.reasoning(
-						entryID: entryID,
-						action: .appendText(part.text, tokenCount: 0)
-					)
-				)
+				await appendReasoning(part.text)
 
 			case .reasoningSummaryPartDone:
 				break
+
+			case .reasoningDelta(let delta, _, _, _, _):
+				await appendReasoning(delta)
+
+			case .reasoningSummaryTextDelta(let delta, _, _, _, _):
+				await appendReasoning(delta)
+
+			case .refusalDone(let refusal, _, _, _, _):
+				throw LanguageModelError.refusal(
+					.init(explanation: refusal, debugDescription: refusal)
+				)
 
 			case .responseCompleted(let response):
 				let inputTokens = response.usage?.inputTokens ?? 0
@@ -152,7 +167,9 @@ struct EventTranslator: Sendable {
 
 			case .responseCreated, .responseInProgress, .contentPartAdded,
 				 .contentPartDone, .outputItemDone, .functionCallArgumentsDone,
-				 .responseQueued, .responseIncomplete:
+				 .responseQueued, .responseIncomplete,
+				 .outputTextDelta, .outputTextDone, .outputTextAnnotationAdded,
+				 .refusalDelta, .reasoningDone, .reasoningSummaryTextDone:
 				break
 			}
 		}

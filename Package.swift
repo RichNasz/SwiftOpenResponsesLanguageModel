@@ -14,7 +14,7 @@ let package = Package(
 		),
 	],
 	dependencies: [
-		.package(url: "https://github.com/RichNasz/SwiftOpenResponsesDSL.git", from: "0.2.0"),
+		.package(url: "https://github.com/RichNasz/SwiftOpenResponsesDSL.git", revision: "728851b604fb7be9d2cdd033682f714cb3bd62be"),
 	],
 	targets: [
 		.target(

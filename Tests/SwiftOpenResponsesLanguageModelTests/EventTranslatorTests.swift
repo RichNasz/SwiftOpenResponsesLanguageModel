@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import os
 import FoundationModels
 import SwiftOpenResponsesDSL
 @testable import SwiftOpenResponsesLanguageModel
@@ -30,6 +31,26 @@ struct EventTranslatorTests {
 			}
 			continuation.finish(throwing: error)
 		}
+	}
+
+	private func sendCount(
+		events: [StreamEvent]
+	) async throws -> Int {
+		let translator = EventTranslator(
+			responseEntryID: "resp-1",
+			toolCallsEntryID: "tc-1"
+		)
+		let channel = LanguageModelExecutorGenerationChannel()
+		let count = OSAllocatedUnfairLock(initialState: 0)
+		let drainTask = Task {
+			for try await _ in channel {
+				count.withLock { $0 += 1 }
+			}
+		}
+		defer { drainTask.cancel() }
+		try await translator.translate(makeStream(events: events), into: channel)
+		try await Task.sleep(for: .milliseconds(50))
+		return count.withLock { $0 }
 	}
 
 	private func translate(
@@ -175,6 +196,65 @@ struct EventTranslatorTests {
 		await #expect(throws: OpenResponsesError.self) {
 			try await translate(events: [
 				.responseFailed(failedResponse(code: "invalid_api_key", message: "bad key"))
+			])
+		}
+	}
+
+	@Test func outputTextDeltaDoesNotAppendAgain() async throws {
+		let count = try await sendCount(events: [
+			.contentPartDelta(delta: "Hello", index: 0, contentIndex: 0),
+			.outputTextDelta(
+				delta: "Hello",
+				index: 0,
+				contentIndex: 0,
+				itemId: "item-1",
+				sequenceNumber: 1,
+				logprobs: nil
+			),
+			.outputTextDone(
+				text: "Hello",
+				index: 0,
+				contentIndex: 0,
+				itemId: "item-1",
+				sequenceNumber: 2,
+				logprobs: nil
+			),
+			.responseCompleted(completedResponse())
+		])
+		#expect(count == 2)
+	}
+
+	@Test func reasoningDeltaAppendsOnce() async throws {
+		let count = try await sendCount(events: [
+			.reasoningDelta(
+				delta: "think",
+				index: 0,
+				contentIndex: 0,
+				itemId: "item-1",
+				sequenceNumber: 1
+			),
+			.reasoningDone(
+				text: "think",
+				index: 0,
+				contentIndex: 0,
+				itemId: "item-1",
+				sequenceNumber: 2
+			),
+			.responseCompleted(completedResponse())
+		])
+		#expect(count == 2)
+	}
+
+	@Test func refusalDoneThrowsRefusal() async {
+		await #expect(throws: LanguageModelError.self) {
+			try await translate(events: [
+				.refusalDone(
+					refusal: "no",
+					index: 0,
+					contentIndex: 0,
+					itemId: "item-1",
+					sequenceNumber: 1
+				)
 			])
 		}
 	}

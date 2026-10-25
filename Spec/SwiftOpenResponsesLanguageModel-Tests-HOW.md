@@ -199,6 +199,9 @@ Test `EventTranslator.translate(_:into:)` by constructing a `StreamEvent` stream
 | errorEventThrowsStreamError | `.error("something broke")` | Throws `OpenResponsesError.streamError` |
 | noCompletionSendsFallbackUsage | Stream ends without `.responseCompleted` | Channel receives zero-usage update |
 | ignoredEventsProduceNoSends | `.responseCreated`, `.contentPartAdded`, `.outputItemDone` | No channel events |
+| outputTextDeltaDoesNotAppendAgain | `.contentPartDelta("Hello")`, `.outputTextDelta` with the same delta, `.outputTextDone("Hello")`, `.responseCompleted` | Channel receives two sends: the content delta and the usage update |
+| reasoningDeltaAppendsOnce | `.reasoningDelta("think")`, `.reasoningDone("think")`, `.responseCompleted` | Channel receives two sends: one reasoning append and the usage update |
+| refusalDoneThrowsRefusal | `.refusalDone("no")` | Throws `LanguageModelError.refusal` |
 
 ---
 

@@ -73,29 +73,15 @@ public struct OpenResponsesExecutor: LanguageModelExecutor {
 
 	/// Opens a connection to the endpoint without starting a generation.
 	///
-	/// The transcript is ignored. This resumes a `GET` on `URLSession.shared` and returns
-	/// immediately. `LLMClient` keeps its own session, so this warms a different pool
-	/// to the same host. Failures are ignored.
+	/// The transcript is ignored. This schedules ``LLMClient/prewarm()`` and returns
+	/// without waiting. That call sends `GET` on the client's own session, with the
+	/// same `Authorization` and custom headers as generation, a five-second timeout,
+	/// and no body. Failures are ignored. Open Responses does not define a prewarm call.
 	public func prewarm(model: OpenResponsesLanguageModel, transcript: Transcript) {
-		let request = Self.warmRequest(configuration: configuration)
-		URLSession.shared.dataTask(with: request).resume()
-	}
-
-	static func warmRequest(configuration: Configuration) -> URLRequest {
-		var request = URLRequest(url: configuration.baseURL)
-		request.httpMethod = "GET"
-		let interval = min(configuration.timeout, 5)
-		request.timeoutInterval = interval > 0 ? interval : 5
-		switch configuration.authMode {
-		case .apiKey(let key):
-			let token = key.isEmpty ? "lm-studio" : key
-			request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-		case .proxied:
-			for (name, value) in configuration.customHeaders {
-				request.setValue(value, forHTTPHeaderField: name)
-			}
+		let client = client
+		Task {
+			await client.prewarm()
 		}
-		return request
 	}
 
 	/// Streams a generation response from the remote endpoint into the FoundationModels channel.

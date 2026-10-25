@@ -174,11 +174,9 @@ FoundationModels behavior this package does not provide. Do not invent stand-in 
 
 10. **On-device-only `SystemLanguageModel` API is absent.** That includes `isAvailable`, `contextSize`, `tokenCount(for:)`, guardrails, adapters, and Private Cloud Compute. `LanguageModel` does not require them. They are not an Open Responses surface, and the DSL is not expected to grow them.
 
-11. **Data attachments are not sent.** Segments are text, structure, and images. Open Responses allows file input through `InputFileContentParam` (`filename`, `file_data`, `file_url`). The API is not the gap. The FoundationModels interface in Xcode 27.1 does not include the OS 27.2 data-attachment APIs. After that SDK ships, SwiftOpenResponsesDSL still has to encode `InputFileContent`. Image input already uses `input_image`.
+11. **Data attachments are not sent.** Segments are text, structure, and images. Open Responses allows file input through `InputFileContentParam` (`filename`, `file_data`, `file_url`). SwiftOpenResponsesDSL encodes that as `InputContentPart.inputFile`. The FoundationModels interface in Xcode 27.1 does not include the OS 27.2 data-attachment APIs. `Transcript.Attachment` is only an image, so this package has nothing to translate yet. Image input already uses `input_image`.
 
 12. **Image orientation is not applied.** The JPEG is the pixel buffer as handed over, and `detail` stays unset. This is a characteristic of Open Responses. `InputImageContent` has `image_url` and `detail` (`low`, `high`, `auto`) and no orientation. The DSL matches that. Apple's image attachment has orientation and no detail level. A non-empty attachment label is sent as text immediately before the image.
-
-13. **`prewarm` does not warm `LLMClient`'s connection pool.** It sends a GET on a shared session and returns without waiting. It does not generate. Open Responses does not define a prewarm call. Generation is `POST /responses`. The GET is this package's choice. The client's session is private in SwiftOpenResponsesDSL, so the GET uses a different pool to the same host.
 
 ## Quick Reference
 

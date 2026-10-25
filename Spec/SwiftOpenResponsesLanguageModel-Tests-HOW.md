@@ -223,7 +223,7 @@ Test `EventTranslator.translate(_:into:)` by constructing a `StreamEvent` stream
 2. **OpenResponsesModelTests** — validates capability mapping used by RequestBuilder
 3. **RequestBuilderTests** — bulk of coverage, depends on fixture construction patterns
 4. **EventTranslatorTests** — most complex async patterns, built last
-5. **OpenResponsesExecutorTests** — `warmRequest` header and timeout rules, and `prewarm` returning in under one second against `http://192.0.2.1/v1/responses`
+5. **OpenResponsesExecutorTests** — `prewarm` returns in under one second against `http://192.0.2.1/v1/responses`. The warm `GET`'s method, headers, and five-second timeout are covered by SwiftOpenResponsesDSL.
 
 ---
 

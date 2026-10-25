@@ -19,40 +19,6 @@ struct OpenResponsesExecutorTests {
 		)
 	}
 
-	@Test func warmRequestUsesBearerAndCapsTimeout() {
-		let request = OpenResponsesExecutor.warmRequest(
-			configuration: configuration(auth: .apiKey("sk-test"), timeout: 60)
-		)
-		#expect(request.httpMethod == "GET")
-		#expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer sk-test")
-		#expect(request.timeoutInterval == 5)
-	}
-
-	@Test func emptyAPIKeyUsesLMStudio() {
-		let request = OpenResponsesExecutor.warmRequest(
-			configuration: configuration(auth: .apiKey(""))
-		)
-		#expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer lm-studio")
-	}
-
-	@Test func shortTimeoutIsKept() {
-		let request = OpenResponsesExecutor.warmRequest(
-			configuration: configuration(auth: .apiKey("sk-test"), timeout: 2)
-		)
-		#expect(request.timeoutInterval == 2)
-	}
-
-	@Test func proxiedForwardsHeadersWithoutAuthorization() {
-		let request = OpenResponsesExecutor.warmRequest(
-			configuration: configuration(
-				auth: .proxied(headers: ["X-Token": "abc"]),
-				headers: ["X-Token": "abc"]
-			)
-		)
-		#expect(request.value(forHTTPHeaderField: "X-Token") == "abc")
-		#expect(request.value(forHTTPHeaderField: "Authorization") == nil)
-	}
-
 	@Test func prewarmReturnsWithoutWaiting() throws {
 		let config = configuration(auth: .apiKey("sk-test"), timeout: 30)
 		let executor = try OpenResponsesExecutor(configuration: config)

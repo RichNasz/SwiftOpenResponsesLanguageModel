@@ -1,5 +1,5 @@
 {
-  "originHash" : "14792df9946b896695eab11d63fe80661be47fdd170a97f0d1e4ca9c68637f88",
+  "originHash" : "c2fa3a079015b12f371fc825a5180685f6f1a39a3c0b61d039f6f629652ae223",
   "pins" : [
     {
       "identity" : "swift-syntax",
@@ -24,7 +24,7 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/RichNasz/SwiftOpenResponsesDSL.git",
       "state" : {
-        "revision" : "728851b604fb7be9d2cdd033682f714cb3bd62be"
+        "revision" : "6e19d76c0b43d5f18dcf0d8348a1a76418a3f78b"
       }
     }
   ],

@@ -49,7 +49,7 @@ Sources/SwiftOpenResponsesLanguageModel/
 3. Streams via `client.stream(built.request)` and feeds events to the channel, passing `fallbackModelID: configuration.model.id`
 4. Any error is passed through `ErrorMapper.map(_:)` before re-throwing
 
-**Prewarm** — `prewarm(model:transcript:)` does not generate and ignores the transcript. `OpenResponsesExecutor.warmRequest(configuration:)` builds a `GET` `URLRequest` for `configuration.baseURL`. `timeoutInterval` is `min(configuration.timeout, 5)` when that value is greater than 0, otherwise 5. `.apiKey(key)` sets `Authorization: Bearer <key>`; an empty key uses `lm-studio`. `.proxied` copies `configuration.customHeaders` and sets no `Authorization`. `prewarm` resumes `URLSession.shared.dataTask(with:)` and returns without awaiting. `LLMClient`'s session is private, so this warms a different connection pool to the same host. Errors are ignored.
+**Prewarm** — `prewarm(model:transcript:)` does not generate and ignores the transcript. It schedules `LLMClient.prewarm()` and returns without waiting for that call or for the network. `LLMClient.prewarm()` sends `GET` on the client's own `URLSession` to `baseURL`, with the same `Authorization` and `customHeaders` as `send`, no body, and `timeoutInterval` of 5 seconds. The executor's `timeout` does not change that interval. Failures are ignored. Open Responses does not define a prewarm operation. `.apiKey("")` still constructs the client with the key `lm-studio`. `.proxied` constructs it with an empty key, so the warm `GET` carries `Authorization: Bearer ` unless `customHeaders` sets `Authorization`.
 
 ---
 

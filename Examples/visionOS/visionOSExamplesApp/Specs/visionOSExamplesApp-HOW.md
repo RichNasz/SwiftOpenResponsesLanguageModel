@@ -9,12 +9,12 @@ visionOSExamplesApp/
 ├── SettingsSheet.swift          # Form sheet for editing EndpointSettings; opened from toolbar
 ├── RootView.swift               # NavigationSplitView + Example enum
 ├── Examples/
-│   ├── StreamingView.swift      # session.streamResponse(to:); capabilities: .init()
-│   ├── MultiTurnView.swift      # session.respond(to:) on reused LanguageModelSession
+│   ├── StreamingView.swift      # session.streamResponse(to:); usage totals after completion
+│   ├── MultiTurnView.swift      # session.respond(to:) on a reused session; prewarm()
 │   ├── ToolCallingView.swift    # GetCurrentDateTool; capabilities: .init(toolCalling: true)
 │   ├── StructuredOutputView.swift # @Generable MovieRecommendation; capabilities: .init(structuredOutput: true)
-│   ├── ImageInputView.swift     # LLMClient + InputContentPart.inputImage (see note)
-│   └── ReasoningView.swift      # ContextOptions.ReasoningLevel; capabilities: .init(reasoning: true)
+│   ├── ImageInputView.swift     # Attachment<ImageAttachmentContent> plus optional label
+│   └── ReasoningView.swift      # ContextOptions.ReasoningLevel; reasoning text and token count
 └── Specs/
     ├── visionOSExamplesApp-WHAT.md
     └── visionOSExamplesApp-HOW.md
@@ -36,7 +36,9 @@ Uses `@Bindable var settings = settings` to derive bindings from the `@Observabl
 
 ## OpenResponsesLanguageModel Construction
 
-Each example constructs `OpenResponsesLanguageModel` at generation time (inside the async task), not at view init. This ensures settings are captured at the moment Send is tapped, not at the time the view appears.
+Each example constructs `OpenResponsesLanguageModel` at generation time (inside the async task), not at view init. This ensures settings are captured at the moment Send is tapped, not at the time the view appears. `MultiTurnView` is the exception: it builds the model when settings change so one session can keep the transcript.
+
+After every `LanguageModelSession` is created, the scene calls `session.prewarm()`. The method returns immediately. The executor schedules `LLMClient.prewarm()`, a `GET` on the client's session with the same auth headers as generation, and does not wait for it. The call does not generate.
 
 ## ToolCallingView: Tool Protocol (Verified API)
 
@@ -46,6 +48,8 @@ The FoundationModels `Tool` protocol (visionOS 27) requires:
 - `@concurrent func call(arguments: Arguments) async throws -> String` where `Output = String`
 
 `GetCurrentDateTool` must be `Sendable` (required by the `Tool` protocol). Rather than a shared `actor`-based log, the tool receives a `@Sendable @MainActor (String, String) -> Void` closure. The closure is declared `@MainActor` so it can safely mutate the `@State` array `events` without `await MainActor.run { }` wrapping.
+
+The model is `capabilities: .init(toolCalling: true)`. `structuredOutput` stays at its default, `false`, so `RequestBuilder` leaves `FunctionTool.strict` unset.
 
 ## StructuredOutputView: Structured Output (Verified API)
 
@@ -57,17 +61,25 @@ The FoundationModels `Tool` protocol (visionOS 27) requires:
 
 `NSAppTransportSecurity` is configured with `NSAllowsArbitraryLoads = YES`. The app connects to user-configured LLM endpoints that may be local (HTTP) or remote (HTTPS) at arbitrary URLs — restricting transport security would break the core use case. Acceptable for a developer-facing example app; a production app should use domain-specific exceptions instead.
 
-## ImageInputView: Direct DSL Usage
+## StreamingView: Sampling and Usage
 
-FoundationModels' `Transcript.Segment` does not expose an `.attachment` case in this SDK release — there is no public API to pass image data through `LanguageModelSession`. `ImageInputView` bypasses FoundationModels session entirely and uses `LLMClient` from `SwiftOpenResponsesDSL` directly:
+`makeModel()` uses `capabilities: .init()`. `samplingParams` therefore stays at its default, `true`. The view does not pass `GenerationOptions`, so this scene does not set temperature or top-p itself.
+
+The stream loop keeps the latest `partial.usage`. After the loop, if `input.totalTokenCount` or `output.totalTokenCount` is non-zero, the view shows both. Earlier snapshots stay at zero because Open Responses deltas have no token count.
+
+## ImageInputView: Session Attachment
+
+Image input goes through `LanguageModelSession`, with `capabilities: .init(imageInput: true)`.
 
 The `.onChange(of: pickerItem)` closure uses `Task { @MainActor in ... }` so that `@State` properties (`imageData`, `displayImage`) are accessed on the main actor. Without `@MainActor`, Swift 6 strict concurrency flags a warning because `@State` properties are main-actor-isolated and cannot be referenced from a plain `Sendable` closure.
 
-1. Load image bytes via `PhotosPickerItem.loadTransferable(type: Data.self)`
-2. Compress via `UIImage.jpegData(compressionQuality: 0.8)` and base64-encode
-3. Build a data URI: `"data:image/jpeg;base64,\(base64)"`
-4. Construct `ResponseRequest` with `InputMessage.content = .parts([.inputImage(url: dataURI, detail: nil), .inputText(prompt)])`
-5. Stream via `client.stream(request)`, accumulating `.contentPartDelta` events
+1. Load image bytes via `PhotosPickerItem.loadTransferable(type: Data.self)`.
+2. Decode a `CGImage`.
+3. Build `Attachment<ImageAttachmentContent>(cgImage)`. Do not pass an orientation. This package sends the pixel buffer as a JPEG data URI and leaves `detail` unset.
+4. If the label field is non-empty after trimming, call `.label(_)` on the attachment. `RequestBuilder` emits that string as `input_text` immediately before the image. An empty label adds no text part.
+5. Stream with `session.streamResponse { imageAttachment; prompt }`.
+
+`RequestBuilder` performs the JPEG encoding. The view does not build a data URI or call `LLMClient`.
 
 ## ReasoningView: Reasoning API (Verified API)
 
@@ -86,12 +98,12 @@ let reasoningSegments = result.transcriptEntries.compactMap { entry -> String? i
 reasoningText = reasoningSegments.joined(separator: "\n\n")
 ```
 
-## MultiTurnView: Non-streaming Respond
+The signature on that reasoning entry is not displayed and is not sent on a later turn. `InputItem` in SwiftOpenResponsesDSL has no reasoning case. When `result.usage.output.reasoningTokenCount` or `totalTokenCount` is non-zero, the view shows both under the answer.
+
+## MultiTurnView: Session Rebuild
+
+`buildSession()` runs from `onAppear` and whenever `baseURL`, `modelID`, or `apiKey` changes. The API key is part of `LLMClient` initialization, so a settings change has to replace the session. An empty or invalid URL or model ID sets `session` to `nil` and disables Send. `prewarm()` runs on each successful build.
 
 Uses `session.respond(to:)` rather than `session.streamResponse(to:)`. Streaming in a chat list requires tracking which bubble is accumulating — an extra `@State` array index plus special-casing the last message — which would obscure the multi-turn concept. `respond()` appends the complete assistant message in one step, keeping the implementation focused.
 
-## Session Lifecycle
-
-`MultiTurnView` rebuilds the session (`buildSession()`) whenever `settings.baseURL` or `settings.modelID` changes. The session is set to `nil` when the URL or model ID is empty or invalid, which disables the Send button via `canSend`.
-
-All other examples create a fresh `LanguageModelSession` per generation call — correct since single-turn examples don't need to preserve history.
+All other examples create a fresh `LanguageModelSession` per generation call, call `prewarm()`, and drop the session when that call finishes.

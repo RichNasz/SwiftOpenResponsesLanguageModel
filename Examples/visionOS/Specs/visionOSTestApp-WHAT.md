@@ -10,22 +10,22 @@ For capability-focused examples (streaming, multi-turn, tool calling, structured
 
 ## Overview
 
-A visionOS demo app extending the iOS test app with support for custom endpoints and model IDs. Designed to demonstrate connecting to local LLM servers (LM Studio, Ollama, etc.) in addition to Open Responses-compatible hosted APIs.
+A visionOS demo app for custom endpoints and model IDs. Designed to demonstrate connecting to local LLM servers (LM Studio, Ollama, etc.) in addition to Open Responses-compatible hosted APIs. The macOS test app follows this same flow. The iOS test app uses the same endpoint fields and also shows token totals.
 
-## Features Beyond the iOS App
+## Features
 
 - **Base URL Input**: Plain text field for the full endpoint URL. Persisted via `@AppStorage`. Required — no default.
 - **Model ID Input**: Free-text field for any model ID string. Persisted via `@AppStorage`. No default.
-  - A custom `OpenResponsesModel` is created with `toolCalling: false` capabilities.
-- **API Key**: Optional — labeled "API Key (optional)". Empty is valid for local servers with no auth.
-- **Effective URL Display**: Shows the active endpoint URL inline while a request is in progress.
+  - A custom `OpenResponsesModel` is created with `toolCalling: false`. `samplingParams` stays at its default, `true`.
+- **API Key**: Optional — labeled "API Key (optional)". An empty value is sent as `Authorization: Bearer lm-studio`.
+- **Effective URL Display**: Shows the active endpoint URL inline while a request is in progress, and clears it when generation ends.
+- **Prewarm**: `session.prewarm()` runs after the session is created. It returns immediately and does not generate.
 
 ## Differences from iOS App
 
 | iOS App | visionOS App |
 |---|---|
-| Model picker (preset list) | Free-text model ID input |
-| API key required to send | API key optional |
+| API key required to send | API key optional (`Bearer lm-studio` when empty) |
 | `UserDefaults` persistence | `@AppStorage` persistence |
 | Token count display | Active URL display during generation |
 
@@ -36,6 +36,6 @@ A visionOS demo app extending the iOS test app with support for custom endpoints
 - [ ] Custom base URL routes requests to the specified endpoint
 - [ ] Model IDs are used as-is with `toolCalling: false` as a safe default capability
 - [ ] Invalid or empty base URL shows an error rather than falling back to a default
-- [ ] Empty API key works for local servers (no Authorization header needed)
+- [ ] Empty API key works for local servers. The client sends `Authorization: Bearer lm-studio`
 - [ ] Effective URL appears during generation and clears on completion
-- [ ] Streaming, cancellation, and error display work the same as the iOS app
+- [ ] Streaming, cancellation, and `String(reflecting:)` error display work as specified

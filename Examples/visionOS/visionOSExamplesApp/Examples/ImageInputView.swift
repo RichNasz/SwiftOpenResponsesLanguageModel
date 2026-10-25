@@ -10,6 +10,7 @@ struct ImageInputView: View {
     @State private var pickerItem: PhotosPickerItem?
     @State private var imageData: Data?
     @State private var displayImage: Image?
+    @State private var imageLabel = ""
     @State private var prompt = "Describe what you see in this image."
     @State private var response = ""
     @State private var isGenerating = false
@@ -39,6 +40,8 @@ struct ImageInputView: View {
                         }
                     }
                 }
+                TextField("Label (optional)", text: $imageLabel)
+                    .autocorrectionDisabled()
             }
 
             Section("Prompt") {
@@ -113,7 +116,14 @@ struct ImageInputView: View {
                 baseURL: url
             )
             let session = LanguageModelSession(model: lm)
-            let imageAttachment = Attachment<ImageAttachmentContent>(cgImage)
+            session.prewarm()
+            // Orientation is accepted by Attachment and is not applied on the wire.
+            // The JPEG is this CGImage's pixel buffer, and detail stays unset.
+            var imageAttachment = Attachment<ImageAttachmentContent>(cgImage)
+            let trimmedLabel = imageLabel.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmedLabel.isEmpty {
+                imageAttachment = imageAttachment.label(trimmedLabel)
+            }
             let stream = session.streamResponse {
                 imageAttachment
                 prompt

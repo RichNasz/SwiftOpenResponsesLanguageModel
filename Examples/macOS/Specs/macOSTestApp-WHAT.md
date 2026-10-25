@@ -22,7 +22,7 @@ A macOS demo app showing `OpenResponsesLanguageModel` used with FoundationModels
 - [ ] Custom base URL routes requests to the specified endpoint
 - [ ] Model IDs are used as-is with `toolCalling: false` as a safe default capability
 - [ ] Invalid or empty base URL shows an error rather than falling back to a default
-- [ ] Empty API key works for local unauthenticated servers
+- [ ] Empty API key works for local servers. The client sends `Authorization: Bearer lm-studio`
 - [ ] Effective URL appears during generation and clears on completion
 - [ ] Streaming response text appears incrementally
 - [ ] Tapping Stop cancels generation cleanly without showing an error

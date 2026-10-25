@@ -63,6 +63,7 @@ struct MultiTurnView: View {
         .onAppear { buildSession() }
         .onChange(of: settings.baseURL) { _, _ in buildSession() }
         .onChange(of: settings.modelID) { _, _ in buildSession() }
+        .onChange(of: settings.apiKey) { _, _ in buildSession() }
         .alert("Error", isPresented: .constant(errorMessage != nil)) {
             Button("OK") { errorMessage = nil }
         } message: {
@@ -82,7 +83,9 @@ struct MultiTurnView: View {
         guard !trimmedID.isEmpty, let url = URL(string: trimmedURL) else { session = nil; return }
         let model = OpenResponsesModel(id: trimmedID, capabilities: .init())
         let lm = OpenResponsesLanguageModel(name: model, auth: .apiKey(settings.apiKey), baseURL: url)
-        session = LanguageModelSession(model: lm)
+        let session = LanguageModelSession(model: lm)
+        session.prewarm()
+        self.session = session
     }
 
     private func reset() {

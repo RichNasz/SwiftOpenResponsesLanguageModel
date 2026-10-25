@@ -29,7 +29,7 @@ Build an `OpenResponsesModel` from the `modelID` string with `toolCalling: false
 
 ## Send Guard
 
-Send is enabled only when all three fields are non-empty after whitespace trimming: `baseURL`, `modelID`, and `prompt`. The API key field is required on iOS (unlike visionOS/macOS where it is optional).
+Send is enabled only when `baseURL`, `modelID`, `apiKey`, and `prompt` are non-empty after whitespace trimming. The API key is required on iOS. visionOS and macOS leave it optional.
 
 ## Send / Stop Toggle
 
@@ -42,16 +42,17 @@ Runs on `@MainActor` via a `Task<Void, Never>` stored in `currentTask`:
 1. Set `isGenerating = true`; clear `response`, `errorMessage`, `inputTokens`, `outputTokens`.
 2. Validate `baseURL` by trimming whitespace and constructing a `URL`. If invalid, set `errorMessage` and return early.
 3. Construct `OpenResponsesLanguageModel` with the validated URL, the resolved model, and `.apiKey(apiKey)` auth.
-4. Create a fresh `LanguageModelSession` and call `streamResponse(to: prompt)`.
-5. Iterate partial responses on the main actor; check `Task.isCancelled` before each update and break early if cancelled.
-6. Catch `CancellationError` silently (user tapped Stop — no error message shown).
-7. Catch all other errors and display `error.localizedDescription` in `errorMessage`.
-8. On exit (defer): set `isGenerating = false`, clear `currentTask`.
+4. Create a fresh `LanguageModelSession`, call `prewarm()`, and call `streamResponse(to: prompt)`. `prewarm()` returns immediately and does not generate.
+5. Iterate partial responses on the main actor; check `Task.isCancelled` before each update and break early if cancelled. Keep the latest `partial.usage`.
+6. After the loop, if `input.totalTokenCount` or `output.totalTokenCount` is non-zero, store both in `inputTokens` and `outputTokens`. Otherwise leave both at zero so the label stays hidden.
+7. Catch `CancellationError` silently (user tapped Stop — no error message shown).
+8. Catch all other errors and display `error.localizedDescription` in `errorMessage`.
+9. On exit (defer): set `isGenerating = false`, clear `currentTask`.
 
 ## Layout
 
 `NavigationStack` wrapping a `Form` with four sections:
-1. **Endpoint** — base URL `TextField`, model ID `TextField`, API key `SecureField` (labeled "optional")
+1. **Endpoint** — base URL `TextField`, model ID `TextField`, API key `SecureField` (required)
 2. **Prompt** — `TextEditor` + `HStack` with Send/Stop button and token count label
 3. **Error** (conditional) — red `Text`
 4. **Response** (conditional) — selectable `Text`

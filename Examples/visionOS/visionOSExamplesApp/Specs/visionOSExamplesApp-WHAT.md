@@ -8,14 +8,24 @@ A visionOS 27+ app demonstrating six usage patterns of `SwiftOpenResponsesLangua
 
 | Scene | File | Capability Flags | Core API |
 |---|---|---|---|
-| Streaming | `StreamingView.swift` | defaults (`capabilities: .init()`) | `session.streamResponse(to:)` |
-| Multi-turn Conversation | `MultiTurnView.swift` | defaults | `LanguageModelSession` reused across exchanges |
+| Streaming | `StreamingView.swift` | defaults (`capabilities: .init()`) | `session.streamResponse(to:)`, then usage totals |
+| Multi-turn Conversation | `MultiTurnView.swift` | defaults | `LanguageModelSession` reused across exchanges; `prewarm()` |
 | Tool Calling | `ToolCallingView.swift` | `toolCalling: true` | Tool registration, tool call → output → response |
 | Structured Output | `StructuredOutputView.swift` | `structuredOutput: true` | `session.respond(to:generating:)` returning `Response<T>` |
-| Image Input | `ImageInputView.swift` | N/A (see note) | `LLMClient` + `InputContentPart.inputImage` |
+| Image Input | `ImageInputView.swift` | `imageInput: true` | `Attachment<ImageAttachmentContent>` on `session.streamResponse` |
 | Reasoning | `ReasoningView.swift` | `reasoning: true` | `session.respond(to:contextOptions:)`, reasoning from `transcriptEntries` |
 
-**Image Input note:** FoundationModels does not expose an image attachment API in the public `Transcript.Segment` interface in this SDK release. `ImageInputView` uses `LLMClient` from `SwiftOpenResponsesDSL` directly, encoding the image as a base64 data URI passed as `InputContentPart.inputImage`. This is documented in a comment in the source file.
+**Image input:** The scene uses the same `LanguageModelSession` API as the others. `imageInput: true` maps to `.vision`. `RequestBuilder` turns `Attachment<ImageAttachmentContent>` into an `input_image` JPEG data URI. A non-empty `Attachment.label(_:)` is sent as text immediately before that image. The attachment initializer accepts an orientation; this package does not apply it, and image `detail` stays unset.
+
+**Sampling:** `samplingParams` defaults to `true`. `StreamingView` does not set `GenerationOptions`, so temperature and top-p are included only when the session supplies them.
+
+**Usage:** Text, reasoning, and tool deltas do not carry a token count. Totals arrive on the completed snapshot and on `Response.usage`. `StreamingView` shows input and output totals once either count is non-zero. `ReasoningView` also shows reasoning tokens.
+
+**Prewarm:** Each scene calls `session.prewarm()` after creating the session. The call returns without waiting and does not generate. It schedules `GET` on the client's own session.
+
+**Reasoning replay:** A reasoning transcript entry and its signature are not sent on a later turn. `ReasoningView` only reads the current response.
+
+**Tool strict:** `FunctionTool.strict` is set only when `structuredOutput` is also on. `ToolCallingView` leaves structured output off, so `strict` is omitted.
 
 ## Shared Infrastructure
 
@@ -49,6 +59,7 @@ All examples display errors as `String(reflecting: error)` — richer diagnostic
 - [ ] Multi-turn: session holds context across exchanges; New Conversation resets
 - [ ] Tool Calling: tool call and result appear in event log before final response
 - [ ] Structured Output: result fields populate from a decoded struct, not raw text
-- [ ] Image Input: image previews before sending; request sent with base64-encoded image
-- [ ] Reasoning: reasoning and answer in separate sections; level control changes behavior
+- [ ] Image Input: image previews before sending; optional label is sent as text before the image; request uses `Attachment<ImageAttachmentContent>`
+- [ ] Streaming: input and output token totals appear after completion when the provider reports usage
+- [ ] Reasoning: reasoning and answer in separate sections; level control changes behavior; reasoning token count appears when reported
 - [ ] Settings sheet opens, edits persist, closes cleanly

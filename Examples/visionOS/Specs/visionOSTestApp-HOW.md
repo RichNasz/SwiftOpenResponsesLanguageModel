@@ -34,17 +34,19 @@ Send is enabled when both `modelID` and `prompt` are non-empty after whitespace 
 1. Set `isGenerating = true`; clear `response`, `errorMessage`.
 2. Strip whitespace from `baseURL`, validate as a `URL`. If invalid, set `errorMessage` and exit. On success, set `effectiveURL`.
 3. Construct `OpenResponsesLanguageModel` with `.apiKey(apiKey)` auth and the validated URL.
-4. Create a fresh `LanguageModelSession` and stream partial responses on `@MainActor`; break on `Task.isCancelled`.
+4. Create a fresh `LanguageModelSession`, call `prewarm()`, and stream partial responses on `@MainActor`. Break on `Task.isCancelled`. `prewarm()` returns immediately and does not generate. It schedules `GET` on the client's session.
 5. Catch `CancellationError` silently (user tapped Stop).
 6. Catch other errors and display via `String(reflecting: error)` — this surfaces richer diagnostic detail than `localizedDescription`, which is appropriate for a developer-facing demo app.
 7. On exit (defer): clear `isGenerating`, `currentTask`, and `effectiveURL`.
+
+`capabilities: .init(toolCalling: false)` leaves `samplingParams` at its default, `true`. This app does not set `GenerationOptions`. An empty API key is sent as `Authorization: Bearer lm-studio`.
 
 ## Differences from iOS App
 
 | Concern | iOS | visionOS/macOS |
 |---|---|---|
 | Persistence | `UserDefaults` + `onChange` (required for `SecureField`) | `@AppStorage` |
-| Send guard | Requires API key, baseURL, and prompt | Requires only modelID and prompt |
+| Send guard | Requires API key, base URL, model ID, and prompt | Requires model ID and prompt |
 | Error display | `error.localizedDescription` | `String(reflecting: error)` for richer output |
 | Token display | Shows input/output token counts | Not shown |
 

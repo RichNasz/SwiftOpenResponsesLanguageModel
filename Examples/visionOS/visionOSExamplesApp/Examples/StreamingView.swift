@@ -7,6 +7,7 @@ struct StreamingView: View {
 
     @State private var prompt = ""
     @State private var response = ""
+    @State private var usageSummary: String?
     @State private var isGenerating = false
     @State private var errorMessage: String?
     @State private var currentTask: Task<Void, Never>?
@@ -21,6 +22,11 @@ struct StreamingView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(!isGenerating && !canSend)
+                if let usageSummary {
+                    Text(usageSummary)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             if let errorMessage {
@@ -40,8 +46,8 @@ struct StreamingView: View {
         .navigationTitle("Streaming")
     }
 
-    // samplingParams: false (default) omits temperature and top-P from the request.
-    // Set samplingParams: true on the model to pass GenerationOptions values through.
+    // samplingParams defaults to true. This view does not set GenerationOptions,
+    // so temperature and topP are sent only when the session supplies them.
     private func makeModel() -> OpenResponsesModel {
         OpenResponsesModel(id: settings.modelID, capabilities: .init())
     }
@@ -66,6 +72,7 @@ struct StreamingView: View {
     private func generate() async {
         isGenerating = true
         response = ""
+        usageSummary = nil
         errorMessage = nil
 
         guard let url = URL(string: settings.baseURL.trimmingCharacters(in: .whitespacesAndNewlines)) else {
@@ -81,11 +88,15 @@ struct StreamingView: View {
                 baseURL: url
             )
             let session = LanguageModelSession(model: lm)
+            session.prewarm()
             let stream = session.streamResponse(to: prompt)
+            var latestUsage: LanguageModelSession.Usage?
             for try await partial in stream {
                 guard !Task.isCancelled else { break }
                 response = partial.content
+                latestUsage = partial.usage
             }
+            usageSummary = Self.usageSummary(latestUsage)
         } catch is CancellationError {
             // user tapped Stop
         } catch {
@@ -94,5 +105,14 @@ struct StreamingView: View {
 
         isGenerating = false
         currentTask = nil
+    }
+
+    /// Totals arrive on the completed snapshot. Earlier snapshots stay at zero.
+    private static func usageSummary(_ usage: LanguageModelSession.Usage?) -> String? {
+        guard let usage else { return nil }
+        let input = usage.input.totalTokenCount
+        let output = usage.output.totalTokenCount
+        guard input > 0 || output > 0 else { return nil }
+        return "Input \(input) · Output \(output)"
     }
 }

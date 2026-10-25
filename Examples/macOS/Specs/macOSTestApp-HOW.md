@@ -42,9 +42,11 @@ Same sequence as the visionOS app:
 1. Set `isGenerating = true`; clear `response`, `errorMessage`.
 2. Strip whitespace from `baseURL`, validate as a `URL`, set `effectiveURL` on success.
 3. Construct `OpenResponsesLanguageModel` and a fresh `LanguageModelSession`.
-4. Stream partial responses on `@MainActor`; break on `Task.isCancelled`.
+4. Call `session.prewarm()`, then stream partial responses on `@MainActor`. Break on `Task.isCancelled`. `prewarm()` returns immediately and does not generate.
 5. Catch `CancellationError` silently; display other errors via `errorMessage`.
 6. On exit (defer): clear `isGenerating`, `currentTask`, and `effectiveURL`.
+
+`capabilities: .init(toolCalling: false)` leaves `samplingParams` at its default, `true`. This app does not set `GenerationOptions`. An empty API key is sent as `Authorization: Bearer lm-studio`.
 
 ## Xcode Project Settings
 

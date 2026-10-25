@@ -76,6 +76,7 @@ struct ToolCallingView: View {
             return
         }
 
+        // structuredOutput stays false, so FunctionTool.strict is left unset.
         let model = OpenResponsesModel(
             id: settings.modelID,
             capabilities: .init(toolCalling: true)
@@ -95,6 +96,7 @@ struct ToolCallingView: View {
 
         do {
             let session = LanguageModelSession(model: lm, tools: [tool])
+            session.prewarm()
             let result = try await session.respond(to: prompt)
             events.append(EventEntry(label: "Response", value: result.content))
         } catch is CancellationError {

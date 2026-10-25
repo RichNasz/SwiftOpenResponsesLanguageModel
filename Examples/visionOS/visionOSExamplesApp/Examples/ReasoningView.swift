@@ -9,6 +9,7 @@ struct ReasoningView: View {
     @State private var reasoningLevel: ReasoningLevelOption = .moderate
     @State private var reasoningText = ""
     @State private var answerText = ""
+    @State private var usageSummary: String?
     @State private var isGenerating = false
     @State private var errorMessage: String?
     @State private var currentTask: Task<Void, Never>?
@@ -53,6 +54,11 @@ struct ReasoningView: View {
                     DisclosureGroup("Answer", isExpanded: $answerExpanded) {
                         Text(answerText)
                             .textSelection(.enabled)
+                        if let usageSummary {
+                            Text(usageSummary)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
             }
@@ -81,6 +87,7 @@ struct ReasoningView: View {
         isGenerating = true
         reasoningText = ""
         answerText = ""
+        usageSummary = nil
         errorMessage = nil
 
         guard let url = URL(string: settings.baseURL.trimmingCharacters(in: .whitespacesAndNewlines)) else {
@@ -101,6 +108,7 @@ struct ReasoningView: View {
 
         do {
             let session = LanguageModelSession(model: lm)
+            session.prewarm()
             // Pass the reasoning level via ContextOptions — the FoundationModels-exposed API
             // for controlling reasoning effort. ContextOptions.ReasoningLevel has .light,
             // .moderate, and .deep cases. These map internally to OpenAI reasoning_effort values
@@ -111,10 +119,11 @@ struct ReasoningView: View {
                 contextOptions: ctxOptions
             )
             answerText = result.content
+            usageSummary = Self.usageSummary(result.usage)
 
             // Reasoning text is not a dedicated property on Response<String>. Instead it is
-            // captured as Transcript.Entry.reasoning entries. Extract and concatenate their
-            // text segments from the transcript slice the response carries.
+            // captured as Transcript.Entry.reasoning entries. The signature on that entry is
+            // not sent on a later turn. Extract the summary text from this response only.
             let reasoningSegments = result.transcriptEntries.compactMap { entry -> String? in
                 guard case .reasoning(let r) = entry else { return nil }
                 return r.description
@@ -131,6 +140,13 @@ struct ReasoningView: View {
 
         isGenerating = false
         currentTask = nil
+    }
+
+    private static func usageSummary(_ usage: LanguageModelSession.Usage) -> String? {
+        let output = usage.output.totalTokenCount
+        let reasoning = usage.output.reasoningTokenCount
+        guard output > 0 || reasoning > 0 else { return nil }
+        return "Output \(output) · Reasoning \(reasoning)"
     }
 }
 

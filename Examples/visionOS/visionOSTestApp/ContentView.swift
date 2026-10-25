@@ -93,11 +93,15 @@ struct ContentView: View {
 		isGenerating = true
 		response = ""
 		errorMessage = nil
+		defer {
+			isGenerating = false
+			currentTask = nil
+			effectiveURL = ""
+		}
 
 		let cleaned = baseURL.filter { !$0.isWhitespace }
 		guard !cleaned.isEmpty, let url = URL(string: cleaned) else {
 			errorMessage = "Invalid base URL"
-			isGenerating = false
 			return
 		}
 		effectiveURL = url.absoluteString
@@ -109,6 +113,7 @@ struct ContentView: View {
 				baseURL: url
 			)
 			let session = LanguageModelSession(model: lm)
+			session.prewarm()
 			let stream = session.streamResponse(to: prompt)
 			for try await partial in stream {
 				guard !Task.isCancelled else { break }
@@ -119,8 +124,5 @@ struct ContentView: View {
 		} catch {
 			errorMessage = String(reflecting: error)
 		}
-
-		isGenerating = false
-		currentTask = nil
 	}
 }

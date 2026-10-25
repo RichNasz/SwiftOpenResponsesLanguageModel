@@ -79,6 +79,7 @@ struct StructuredOutputView: View {
 
             do {
                 let session = LanguageModelSession(model: lm)
+                session.prewarm()
                 let response = try await session.respond(to: prompt, generating: MovieRecommendation.self)
                 result = response.content
             } catch {

@@ -150,7 +150,7 @@ let model = OpenResponsesModel(id: "my-model", capabilities: .init(imageInput: t
 let lm = OpenResponsesLanguageModel(name: model, auth: .apiKey("key"), baseURL: url)
 
 let session = LanguageModelSession(model: lm)
-let imageAttachment = Attachment<ImageAttachmentContent>(cgImage)
+let imageAttachment = Attachment<ImageAttachmentContent>(cgImage).label("figure")
 let stream = session.streamResponse {
     imageAttachment
     "Describe what you see in this image."

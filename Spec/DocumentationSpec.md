@@ -32,11 +32,17 @@ Create a lean documentation suite for a project that currently has no README, CL
 
 ### Badge Row
 
-Five badges on the first line after the H1 title, in this order: Swift 6.2+, Platform (macOS 27 | iOS 27 | visionOS 27 | watchOS 27), License (Apache 2.0), Version, Built with Claude Code.
+Five badges on the first line after the H1 title, in this order: Swift 6.2+, Platform (macOS 27 | iOS 27 | visionOS 27 | watchOS 27), License (Apache 2.0), Version, Built with Grok Build.
+
+The Grok Build badge links to `https://github.com/xai-org/grok-build`. Shields.io has no Grok logo, so the badge is text-only: `https://img.shields.io/badge/Built%20with-Grok%20Build-111111`.
+
+No "Built with Claude Code" badge. That badge reads as the current toolchain.
 
 ### One-Sentence Description
 
 Must convey: Swift package providing a `LanguageModel` implementation that connects Apple's FoundationModels to any Open Responses specification endpoint. Must use "drop-in" or "swap" language to convey substitutability.
+
+Immediately under that description, one sentence: this project was started with Claude Code. All project-related work now uses Grok Build and the latest Grok model available. Link Grok Build to `https://github.com/xai-org/grok-build`. Claude Code history stays in that sentence. It does not appear in the badge row.
 
 ### Why Section
 
@@ -224,6 +230,10 @@ LM Studio convention, proxied auth for enterprise, stream resilience for servers
 
 **Structure:**
 
+### Maintenance
+
+One sentence at the top, before Project Overview: this project was started with Claude Code. All project-related work uses Grok Build and the latest Grok model available. Do not describe Claude Code as the current toolchain. The same sentence is in `AGENTS.md` so a session that loads either file follows it.
+
 ### Project Overview
 
 One paragraph: what the package does, its relationship to FoundationModels and SwiftOpenResponsesDSL. Package name, platforms, Swift version.
@@ -296,6 +306,10 @@ Two test targets:
 **Format:** Each topic section follows Pattern/Pitfalls structure.
 
 **Structure:**
+
+### Maintenance
+
+First section, before Installation. State that Claude Code created this project initially, and that all project-related work — maintenance and expansion — uses Grok Build. When a model is required, use the latest Grok model available. Do not treat Claude Code as the current toolchain. This is the session rule. The README badge row shows Grok Build only; the Claude Code history stays in prose.
 
 ### Installation
 
@@ -402,7 +416,7 @@ Describe what you want and why — not how to implement it. The best feature req
 This is the core section that distinguishes this project's contribution model. Must explain:
 
 1. **Specs are the source of truth** — This project uses spec-driven development. The `Spec/` directory contains WHAT specs (desired behavior), HOW specs (implementation approach), and WHY specs (design rationale). Code is generated from these specs.
-2. **Issues drive changes** — All changes start as a GitHub Issue (bug report or feature request). Issues are resolved interactively with an AI coding agent.
+2. **Issues drive changes** — All changes start as a GitHub Issue (bug report or feature request). Issues are resolved in Grok Build with the latest Grok model. The project was started with Claude Code. Claude Code is not the current toolchain.
 3. **The workflow** — Issue raised → AI agent analyzes the issue against existing specs → specs are updated to reflect the change → code is generated from the updated specs → tests verify the implementation.
 4. **Why no code PRs** — Unsolicited code PRs skip the spec step and cannot be accepted. The specs must be updated first so that design decisions are captured and code can be regenerated consistently. Feature ideas raised via issues may be implemented in a future release when they align with the project's direction.
 
@@ -527,6 +541,11 @@ Checked against that OpenAPI file, SwiftOpenResponsesDSL `Spec/Unimplemented.md`
 
 ## Verification
 
+- [ ] README badge row ends with Built with Grok Build, text-only, linking to `https://github.com/xai-org/grok-build`
+- [ ] README has no Built with Claude Code badge
+- [ ] README states the project was started with Claude Code and that all project-related work uses Grok Build and the latest Grok model
+- [ ] AGENTS.md and CLAUDE.md state the same maintenance rule, and neither treats Claude Code as the current toolchain
+- [ ] CONTRIBUTING.md names Grok Build and the latest Grok model as the agent that resolves issues
 - [ ] README code examples compile when extracted and built against a project importing the package
 - [ ] README substitutability story shows identical usage code with only the session init differing
 - [ ] README "Why" section is ~15-20 lines, between the description and "The Swap"

@@ -1,6 +1,10 @@
 # SwiftOpenResponsesLanguageModel — AI Coding Reference
 
-Machine-readable documentation for AI coding tools (Claude Code, Copilot, Cursor, etc.).
+Machine-readable documentation for AI coding tools consuming this library.
+
+## Maintenance
+
+Claude Code created this project initially. All project-related work uses Grok Build. When a model is required, use the latest Grok model available. Do not treat Claude Code as the current toolchain.
 
 ## Installation
 

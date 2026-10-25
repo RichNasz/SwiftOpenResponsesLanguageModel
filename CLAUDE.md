@@ -1,3 +1,7 @@
+## Maintenance
+
+This project was started with Claude Code. All project-related work uses Grok Build and the latest Grok model available. Do not treat Claude Code as the current toolchain.
+
 ## Project Overview
 
 SwiftOpenResponsesLanguageModel is a Swift package that bridges Apple's FoundationModels framework to Open Responses specification-compliant inference endpoints. It provides a `LanguageModel` implementation so any app written against FoundationModels can use any Open Responses-compatible provider by swapping in `OpenResponsesLanguageModel` — no changes to app-level session or generation code required.

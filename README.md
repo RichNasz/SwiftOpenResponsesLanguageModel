@@ -4,9 +4,11 @@
 [![Platform](https://img.shields.io/badge/Platform-macOS%2027%20%7C%20iOS%2027%20%7C%20visionOS%2027%20%7C%20watchOS%2027-lightgrey.svg)](Package.swift)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-0.1.0-brightgreen.svg)](Package.swift)
-[![Built with Claude Code](https://img.shields.io/badge/Built%20with-Claude%20Code-blueviolet?logo=claude)](https://claude.ai/code)
+[![Built with Grok Build](https://img.shields.io/badge/Built%20with-Grok%20Build-111111)](https://github.com/xai-org/grok-build)
 
 A drop-in `LanguageModel` implementation that connects Apple's FoundationModels to any [Open Responses](https://www.openresponses.org/) specification endpoint — swap in `OpenResponsesLanguageModel` and your existing FoundationModels code works with any compatible provider.
+
+This project was started with Claude Code. All project-related work now uses [Grok Build](https://github.com/xai-org/grok-build) and the latest Grok model available.
 
 ## Why
 

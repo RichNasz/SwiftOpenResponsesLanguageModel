@@ -19,7 +19,7 @@ Open a [GitHub Issue](https://github.com/RichNasz/SwiftOpenResponsesLanguageMode
 
 This project uses spec-driven development. The [`Spec/`](Spec/) directory contains WHAT specs (desired behavior), HOW specs (implementation approach), and WHY specs (design rationale). Code is generated from these specs.
 
-All changes start as a GitHub Issue. Issues are resolved interactively with an AI coding agent through this workflow:
+All changes start as a GitHub Issue. This project was started with Claude Code. Issues are now resolved in [Grok Build](https://github.com/xai-org/grok-build) with the latest Grok model, through this workflow:
 
 1. Issue is raised (bug report or feature request)
 2. AI agent analyzes the issue against existing specs

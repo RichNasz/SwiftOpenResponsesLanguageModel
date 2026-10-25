@@ -65,6 +65,46 @@ struct ToolCallingTests {
 		let response = try await session.respond(
 			to: "Use the echo tool to echo the message 'integration test'. You MUST call the echo tool."
 		)
+		let toolOutput = response.transcriptEntries.compactMap { entry -> String? in
+			guard case .toolOutput(let output) = entry else { return nil }
+			return output.segments.compactMap { segment -> String? in
+				if case .text(let text) = segment { return text.content }
+				return nil
+			}.joined()
+		}.joined()
+		#expect(toolOutput.contains("ECHO: integration test"))
+	}
+
+	@Test(.timeLimit(.minutes(3)))
+	func toolCallRequired() async throws {
+		let session = IntegrationTestConfiguration.makeSession(
+			capabilities: .init(toolCalling: true),
+			tools: [GetCurrentDateTool()]
+		)
+		let response = try await session.respond(
+			to: "What is today's date?",
+			options: GenerationOptions(toolCallingMode: .required)
+		)
+		#expect(response.transcriptEntries.contains { entry in
+			if case .toolCalls = entry { return true }
+			return false
+		})
+	}
+
+	@Test(.timeLimit(.minutes(3)))
+	func toolCallDisallowed() async throws {
+		let session = IntegrationTestConfiguration.makeSession(
+			capabilities: .init(toolCalling: true),
+			tools: [GetCurrentDateTool()]
+		)
+		let response = try await session.respond(
+			to: "Name a weekday. Do not call any tools.",
+			options: GenerationOptions(toolCallingMode: .disallowed)
+		)
 		#expect(!response.content.isEmpty)
+		#expect(!response.transcriptEntries.contains { entry in
+			if case .toolCalls = entry { return true }
+			return false
+		})
 	}
 }

@@ -22,6 +22,14 @@ struct ReasoningTests {
 		)
 		#expect(!response.content.isEmpty)
 		#expect(response.content.contains("255"))
+		let reasoningText = response.transcriptEntries.compactMap { entry -> String? in
+			guard case .reasoning(let reasoning) = entry else { return nil }
+			return reasoning.segments.compactMap { segment -> String? in
+				if case .text(let text) = segment { return text.content }
+				return nil
+			}.joined()
+		}.joined()
+		#expect(!reasoningText.isEmpty)
 	}
 
 	@Test(.timeLimit(.minutes(3)))

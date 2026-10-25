@@ -14,6 +14,8 @@ struct BasicGenerationTests {
 		let session = IntegrationTestConfiguration.makeSession()
 		let response = try await session.respond(to: "Reply with exactly the word 'hello' and nothing else.")
 		#expect(!response.content.isEmpty)
+		#expect(response.usage.input.totalTokenCount > 0)
+		#expect(response.usage.output.totalTokenCount > 0)
 	}
 
 	@Test(.timeLimit(.minutes(3)))

@@ -245,6 +245,36 @@ struct EventTranslatorTests {
 		#expect(count == 2)
 	}
 
+	@Test func functionCallDoneSuppliesArguments() async throws {
+		let added = FunctionCallItem(
+			id: "fc-1", callId: "call-1", name: "echo", arguments: ""
+		)
+		let done = FunctionCallItem(
+			id: "fc-1", callId: "call-1", name: "echo", arguments: #"{"message":"hi"}"#
+		)
+		let count = try await sendCount(events: [
+			.outputItemAdded(.functionCall(added), index: 0),
+			.outputItemDone(.functionCall(done), index: 0),
+			.responseCompleted(completedResponse())
+		])
+		#expect(count == 3)
+	}
+
+	@Test func reasoningDoneSuppliesContent() async throws {
+		let added = ReasoningItem(id: "r-1", summary: [], content: [])
+		let done = ReasoningItem(
+			id: "r-1",
+			summary: [],
+			content: [ReasoningContent(type: "reasoning_text", text: "working")]
+		)
+		let count = try await sendCount(events: [
+			.outputItemAdded(.reasoning(added), index: 0),
+			.outputItemDone(.reasoning(done), index: 0),
+			.responseCompleted(completedResponse())
+		])
+		#expect(count == 2)
+	}
+
 	@Test func refusalDoneThrowsRefusal() async {
 		await #expect(throws: LanguageModelError.self) {
 			try await translate(events: [

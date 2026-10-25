@@ -12,9 +12,11 @@ Tests/SwiftOpenResponsesLanguageModelTests/     # Unit tests (no network)
 Tests/IntegrationTests/                         # Integration tests (live endpoint)
 ├── IntegrationTestConfiguration.swift          # Env var reading, model factory, skip predicates
 ├── BasicGenerationTests.swift                  # 5 tests: text gen, streaming, collect, multi-turn, instructions
-├── ToolCallingTests.swift                      # 2 tests: zero-arg round-trip, structured-arg round-trip
+├── SamplingTests.swift                         # 1 test: greedy sampling and maximumResponseTokens
+├── ToolCallingTests.swift                      # 4 tests: zero-arg, structured-arg, required, disallowed
 ├── StructuredOutputTests.swift                 # 1 test: @Generable struct decoding
 ├── ReasoningTests.swift                        # 2 tests: reasoning respond + stream
+├── ImageInputTests.swift                       # 1 test: image attachment, opt-in
 └── ErrorHandlingTests.swift                    # 2 tests: invalid URL, invalid path
 ```
 
@@ -202,6 +204,8 @@ Test `EventTranslator.translate(_:into:)` by constructing a `StreamEvent` stream
 | outputTextDeltaDoesNotAppendAgain | `.contentPartDelta("Hello")`, `.outputTextDelta` with the same delta, `.outputTextDone("Hello")`, `.responseCompleted` | Channel receives two sends: the content delta and the usage update |
 | reasoningDeltaAppendsOnce | `.reasoningDelta("think")`, `.reasoningDone("think")`, `.responseCompleted` | Channel receives two sends: one reasoning append and the usage update |
 | refusalDoneThrowsRefusal | `.refusalDone("no")` | Throws `LanguageModelError.refusal` |
+| functionCallDoneSuppliesArguments | `.outputItemAdded` function call with empty arguments, then `.outputItemDone` with `{"message":"hi"}`, no deltas | Three channel sends: open, arguments, usage |
+| reasoningDoneSuppliesContent | `.outputItemAdded` reasoning with no summary, then `.outputItemDone` with content text | Two channel sends: reasoning append and usage |
 
 ---
 
@@ -263,6 +267,7 @@ Without env vars set, all 12 integration tests skip immediately with descriptive
 | `OPEN_RESPONSES_REASONING_MODEL_ID` | No | — | Model ID for reasoning tests; reasoning tests skip if absent |
 | `OPEN_RESPONSES_STRUCTURED_OUTPUT` | No | `true` | Set to `false` to skip structured output and structured-arg tool tests |
 | `OPEN_RESPONSES_TOOL_CALLING` | No | `true` | Set to `false` to skip tool calling tests |
+| `OPEN_RESPONSES_IMAGE_INPUT` | No | unset | Set to `true` to run the image attachment test. Otherwise the suite skips |
 
 ### Skip Logic
 
@@ -293,7 +298,7 @@ No `@testable import` — integration tests exercise the public surface.
 
 | Test | What it exercises | Assertion |
 |---|---|---|
-| `textGeneration` | `session.respond(to:)` end-to-end | `!response.content.isEmpty` |
+| `textGeneration` | `session.respond(to:)` end-to-end | `!response.content.isEmpty`, `usage.input.totalTokenCount > 0`, `usage.output.totalTokenCount > 0` |
 | `streamingTextGeneration` | `session.streamResponse(to:)` iteration | Multiple snapshots, last content non-empty |
 | `streamCollect` | `stream.collect()` convenience | `!response.content.isEmpty` |
 | `multiTurnConversation` | Two `respond` calls on same session | Second response contains info from first turn |
@@ -308,7 +313,15 @@ Two `Tool`-conforming types defined in the test file:
 | Test | Gating | What it exercises | Assertion |
 |---|---|---|---|
 | `toolCallRoundTrip` | `supportsToolCalling` | Zero-arg tool call round-trip via `LanguageModelSession` | `!response.content.isEmpty` |
-| `toolCallWithArguments` | `supportsToolCalling && supportsStructuredOutput` | Structured-arg tool call + argument decoding | `!response.content.isEmpty` |
+| `toolCallWithArguments` | `supportsToolCalling && supportsStructuredOutput` | Structured-arg tool call + argument decoding | A `.toolOutput` transcript entry contains `ECHO: integration test` |
+| `toolCallRequired` | `supportsToolCalling` | `GenerationOptions(toolCallingMode: .required)` with the date tool | `transcriptEntries` contains `.toolCalls` |
+| `toolCallDisallowed` | `supportsToolCalling` | `GenerationOptions(toolCallingMode: .disallowed)` with the date tool available | Content is non-empty and `transcriptEntries` has no `.toolCalls` |
+
+### SamplingTests (1 test)
+
+| Test | Gating | What it exercises | Assertion |
+|---|---|---|---|
+| `greedyRespectsMaxTokens` | configured | `samplingParams: true`, `samplingMode: .greedy`, `maximumResponseTokens: 64` | Content is non-empty, `usage.output.totalTokenCount > 0` and `<= 64` |
 
 ### StructuredOutputTests (1 test)
 
@@ -324,8 +337,16 @@ Uses `IntegrationTestConfiguration.makeReasoningModel()`.
 
 | Test | Gating | What it exercises | Assertion |
 |---|---|---|---|
-| `reasoningRespond` | `supportsReasoning` | `session.respond(to:contextOptions:)` with `.moderate` | Non-empty, contains correct answer |
+| `reasoningRespond` | `supportsReasoning` | `session.respond(to:contextOptions:)` with `.moderate` | Contains `255`, and a `.reasoning` transcript entry has non-empty text |
 | `reasoningStream` | `supportsReasoning` | `session.streamResponse(to:contextOptions:)` | Snapshots received, last content non-empty |
+
+### ImageInputTests (1 test)
+
+Builds a solid red `CGImage` and sends it with `Attachment` in the prompt builder. The suite is enabled only when `OPEN_RESPONSES_IMAGE_INPUT=true`. The model is created with `imageInput: true`.
+
+| Test | Gating | What it exercises | Assertion |
+|---|---|---|---|
+| `describesAttachedImage` | `OPEN_RESPONSES_IMAGE_INPUT=true` | Prompt plus one image attachment | Response is non-empty |
 
 ### ErrorHandlingTests (2 tests)
 

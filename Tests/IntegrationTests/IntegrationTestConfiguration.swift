@@ -34,6 +34,10 @@ enum IntegrationTestConfiguration {
 		ProcessInfo.processInfo.environment["OPEN_RESPONSES_TOOL_CALLING"] != "false"
 	}()
 
+	static let supportsImageInput: Bool = {
+		ProcessInfo.processInfo.environment["OPEN_RESPONSES_IMAGE_INPUT"] == "true"
+	}()
+
 	static let supportsReasoning: Bool = {
 		reasoningModelID != nil
 	}()

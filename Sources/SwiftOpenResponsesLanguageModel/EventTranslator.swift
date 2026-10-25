@@ -21,10 +21,14 @@ struct EventTranslator: Sendable {
 	) async throws {
 		var activeFunctionCalls: [Int: (id: String, name: String)] = [:]
 		var pendingArgumentDeltas: [Int: [(delta: String, callId: String)]] = [:]
+		var argumentDeltasApplied: Set<Int> = []
 		var reasoningEntryID: String?
+		var sentReasoningText = false
 		var sentCompletion = false
 
 		func appendReasoning(_ text: String) async {
+			guard !text.isEmpty else { return }
+			sentReasoningText = true
 			let entryID: String
 			if let existing = reasoningEntryID {
 				entryID = existing
@@ -55,6 +59,7 @@ struct EventTranslator: Sendable {
 
 			case .functionCallArgumentsDelta(let delta, let callId, let index):
 				if let call = activeFunctionCalls[index] {
+					argumentDeltasApplied.insert(index)
 					await channel.send(
 						.toolCalls(
 							entryID: toolCallsEntryID,
@@ -84,6 +89,7 @@ struct EventTranslator: Sendable {
 						)
 					)
 					if let buffered = pendingArgumentDeltas.removeValue(forKey: index) {
+						argumentDeltasApplied.insert(index)
 						for pending in buffered {
 							await channel.send(
 								.toolCalls(
@@ -99,17 +105,37 @@ struct EventTranslator: Sendable {
 					}
 
 				case .reasoning(let reasoning):
-					let entryID = UUID().uuidString
-					reasoningEntryID = entryID
 					if let summaryText = reasoning.summaryText {
+						await appendReasoning(summaryText)
+					}
+
+				default:
+					break
+				}
+
+			case .outputItemDone(let item, let index):
+				switch item {
+				case .functionCall(let call):
+					if !argumentDeltasApplied.contains(index), !call.arguments.isEmpty {
 						await channel.send(
-							.reasoning(
-								entryID: entryID,
-								action: .appendText(summaryText, tokenCount: 0)
+							.toolCalls(
+								entryID: toolCallsEntryID,
+								action: .toolCall(
+									id: call.callId,
+									name: call.name,
+									action: .appendArguments(call.arguments, tokenCount: 0)
+								)
 							)
 						)
 					}
-
+				case .reasoning(let reasoning):
+					if !sentReasoningText {
+						if let summaryText = reasoning.summaryText, !summaryText.isEmpty {
+							await appendReasoning(summaryText)
+						} else if let contentText = reasoning.contentText {
+							await appendReasoning(contentText)
+						}
+					}
 				default:
 					break
 				}
@@ -166,7 +192,7 @@ struct EventTranslator: Sendable {
 				throw OpenResponsesError.streamError(message)
 
 			case .responseCreated, .responseInProgress, .contentPartAdded,
-				 .contentPartDone, .outputItemDone, .functionCallArgumentsDone,
+				 .contentPartDone, .functionCallArgumentsDone,
 				 .responseQueued, .responseIncomplete,
 				 .outputTextDelta, .outputTextDone, .outputTextAnnotationAdded,
 				 .refusalDelta, .reasoningDone, .reasoningSummaryTextDone:

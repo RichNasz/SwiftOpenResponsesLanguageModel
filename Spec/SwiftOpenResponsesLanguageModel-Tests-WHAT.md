@@ -29,11 +29,15 @@ Capability flag defaults, capability mapping to `LanguageModelCapabilities`, and
 
 ### Basic Generation
 
-End-to-end text generation through `LanguageModelSession`: single prompt, streaming, stream collect, multi-turn conversation, and system instructions.
+End-to-end text generation through `LanguageModelSession`: single prompt, streaming, stream collect, multi-turn conversation, system instructions, and token usage reported on the response.
+
+### Sampling And Length
+
+`samplingParams` with greedy sampling, plus `GenerationOptions.maximumResponseTokens` of 64. The response has text, and its output token count is greater than zero and no greater than 64. The limit leaves room for a short answer after reasoning tokens.
 
 ### Tool Calling
 
-Tool definition via FoundationModels `Tool` protocol with `@Generable` arguments, tool call round-trip through the adapter, and tool argument decoding.
+Tool definition via FoundationModels `Tool` protocol with `@Generable` arguments, tool call round-trip through the adapter, tool argument decoding, `toolCallingMode: .required`, and `toolCallingMode: .disallowed`.
 
 ### Structured Output
 
@@ -41,11 +45,23 @@ Tool definition via FoundationModels `Tool` protocol with `@Generable` arguments
 
 ### Reasoning
 
-Reasoning mode via `ContextOptions(reasoningLevel:)` with a reasoning-capable model, both non-streaming and streaming.
+Reasoning mode via `ContextOptions(reasoningLevel:)` with a reasoning-capable model, both non-streaming and streaming. The non-streaming response transcript includes a reasoning entry with text.
+
+### Image Input
+
+One image attachment on a prompt, gated by `OPEN_RESPONSES_IMAGE_INPUT=true`. Text-only servers skip this suite.
 
 ### Error Handling
 
 Error propagation for unreachable endpoints and invalid endpoint paths.
+
+### Not covered live
+
+These stay unit tests. A live server cannot show them through `LanguageModelSession`:
+
+- `.proxied` headers. The server cannot report which headers it received.
+- `LanguageModelError.refusal`. A model may not refuse on demand.
+- DSL fields with no session control, including `top_logprobs`, `safety_identifier`, `prompt_cache_key`, `stream_options`, and assistant `phase`.
 
 ## Test Framework
 
@@ -77,10 +93,13 @@ macOS 27.0+ (deployment target). No `@available` annotations on test suites — 
 
 - [ ] All integration tests build alongside unit tests
 - [ ] Without environment variables set, all integration tests skip with descriptive messages
-- [ ] With a valid endpoint, basic generation tests pass (text gen, streaming, multi-turn, instructions)
+- [ ] With a valid endpoint, basic generation tests pass (text gen, streaming, multi-turn, instructions) and report non-zero input and output token counts
+- [ ] Greedy sampling with `maximumResponseTokens` returns an output token count within that limit
 - [ ] Tool calling round-trip works with zero-argument tools
-- [ ] Tool calling with structured arguments works on models that support structured output
+- [ ] Tool calling with structured arguments records the tool result `ECHO: integration test` in the transcript
+- [ ] `toolCallingMode: .required` records a tool call, and `.disallowed` records none
 - [ ] Structured output decodes `@Generable` types correctly on capable models
-- [ ] Reasoning mode produces responses with reasoning-capable models
+- [ ] Reasoning mode produces the answer and a non-empty reasoning transcript entry
+- [ ] Image input runs only when `OPEN_RESPONSES_IMAGE_INPUT=true` and returns a description
 - [ ] Error handling tests detect unreachable endpoints and invalid paths
 - [ ] Tests use loose content assertions (contains-checks) to accommodate model variation

@@ -3,7 +3,7 @@
 [![Swift 6.2+](https://img.shields.io/badge/Swift-6.2+-orange.svg)](https://swift.org)
 [![Platform](https://img.shields.io/badge/Platform-macOS%2027%20%7C%20iOS%2027%20%7C%20visionOS%2027%20%7C%20watchOS%2027-lightgrey.svg)](Package.swift)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-0.1.0-brightgreen.svg)](Package.swift)
+[![Version](https://img.shields.io/badge/Version-0.2.0-brightgreen.svg)](Package.swift)
 [![Built with Grok Build](https://img.shields.io/badge/Built%20with-Grok%20Build-111111)](https://github.com/xai-org/grok-build)
 
 A drop-in `LanguageModel` implementation that connects Apple's FoundationModels to any [Open Responses](https://www.openresponses.org/) specification endpoint — swap in `OpenResponsesLanguageModel` and your existing FoundationModels code works with any compatible provider.
@@ -64,7 +64,7 @@ Add to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/RichNasz/SwiftOpenResponsesLanguageModel.git", from: "0.1.0"),
+    .package(url: "https://github.com/RichNasz/SwiftOpenResponsesLanguageModel.git", from: "0.2.0"),
 ]
 ```
 

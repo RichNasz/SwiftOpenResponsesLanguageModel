@@ -107,7 +107,7 @@ for try await partial in stream {
 
 ## Dependencies
 
-- **SwiftOpenResponsesDSL** (local path) — HTTP client, request/response types, streaming event handling
+- **SwiftOpenResponsesDSL** revision `6e19d76` — HTTP client, request/response types, streaming event handling
 - **SwiftLLMToolMacros** (transitive via SwiftOpenResponsesDSL) — JSON schema types
 
 ## Acceptance Criteria
@@ -126,3 +126,4 @@ for try await partial in stream {
 - [ ] `.apiKey` auth passes no custom headers
 - [ ] Custom `baseURL` routes requests to the specified endpoint
 - [ ] Custom `timeout` is applied to the underlying HTTP session
+- [ ] `session.prewarm()` returns without generating. The executor schedules `LLMClient.prewarm()` and does not wait for that call

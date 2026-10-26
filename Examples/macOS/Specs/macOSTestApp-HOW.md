@@ -7,9 +7,13 @@
 - Entry point: `@main App` + single `ContentView`
 - SDK: `macosx`, deployment target: macOS 27.0
 
+## Source
+
+`Examples/macOS/macOSTestApp/`. Open `macOSTestApp.xcworkspace`, which also references the package at the repository root.
+
 ## Relationship to visionOS App
 
-The macOS app is functionally identical to the visionOS test app. The SwiftUI structure — state fields, model resolution, generation flow, cancellation, and layout — is the same on both platforms. The only differences are Xcode project settings (SDK, deployment target, bundle ID) and the window title.
+The macOS app is functionally identical to the visionOS test app. The SwiftUI structure — state fields, model resolution, generation flow, cancellation, and layout — is the same on both platforms. The differences are Xcode project settings (SDK, deployment target, bundle ID), a macOS `Info.plist` without `UIApplication` keys, and a default window size of 560×680. The navigation title stays `OpenResponses`. `GENERATE_INFOPLIST_FILE` supplies the bundle keys. The checked-in plist adds `NSHighResolutionCapable` and `NSAllowsArbitraryLoads`.
 
 ## State
 

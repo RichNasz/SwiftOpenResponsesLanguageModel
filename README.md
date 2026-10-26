@@ -101,7 +101,7 @@ See [Spec/SwiftOpenResponsesLanguageModel-WHAT.md](Spec/SwiftOpenResponsesLangua
 
 ## Next Steps
 
-See [docs/getting-started.md](docs/getting-started.md) for the full progression from basic streaming through tool calling, structured output, image input, and reasoning. Complete app implementations are in [Examples/](Examples/) — the visionOS examples app demonstrates all six usage patterns.
+See [docs/getting-started.md](docs/getting-started.md) for the full progression from basic streaming through tool calling, structured output, image input, and reasoning. Complete app implementations are in [Examples/](Examples/). The visionOS and macOS examples apps demonstrate all six usage patterns, and each of those platforms has an endpoint test app. The iOS test app is specified in [Examples/iOS/Specs/](Examples/iOS/Specs/) and has no target yet.
 
 ## Testing
 

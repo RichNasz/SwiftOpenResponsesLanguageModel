@@ -18,7 +18,7 @@ Create a lean documentation suite for a project that currently has no README, CL
 2. **Substitutability as the story** — The README's code example shows the FoundationModels baseline (on-device) alongside the OpenResponsesLanguageModel alternative (remote provider). The user sees that only the model passed to `LanguageModelSession` changes.
 3. **Progressive disclosure** — README shows install + one example. The getting-started guide builds from basic streaming through auth, capabilities, tool calling, structured output, image input, and reasoning. Each section builds on the previous one.
 4. **Two audiences** — Humans read README and the guide; AI tools read AGENTS.md; contributors read CLAUDE.md. No content is duplicated across files.
-5. **Examples already exist** — The project has three example apps (iOS, macOS, visionOS). The guide references them but doesn't reproduce full app code.
+5. **Examples already exist** — visionOS and macOS each have an examples app and an endpoint test app under `Examples/`. The iOS test app is specified in `Examples/iOS/Specs/` and has no target yet. The guide references the apps and does not reproduce full app code.
 
 ---
 
@@ -95,7 +95,7 @@ Table mapping `OpenResponsesModel.Capabilities` flags to what they enable:
 
 ### Next Steps
 
-Link to `docs/getting-started.md` for the full progression from basic streaming through advanced features. Link to example apps in `Examples/` for complete app implementations.
+Link to `docs/getting-started.md` for the full progression from basic streaming through advanced features. Name the visionOS and macOS examples apps and their endpoint test apps. Say the iOS test app is specified and has no target yet.
 
 ### For AI Coding Tools
 
@@ -123,7 +123,9 @@ One line with link to LICENSE file.
 
 ### 1. Basic Streaming
 
-The simplest possible usage. Construct an `OpenResponsesModel` with default capabilities, create an `OpenResponsesLanguageModel` with `.apiKey` auth, pass to `LanguageModelSession`, and stream a response.
+The simplest possible usage. Construct an `OpenResponsesModel` with default capabilities, create an `OpenResponsesLanguageModel` with `.apiKey` auth, pass to `LanguageModelSession`, call `session.prewarm()`, and stream a response.
+
+`prewarm()` returns immediately and does not generate. It schedules `GET` on the client's session. One sentence is enough. Do not document the executor.
 
 Must include: complete code block, brief explanation of what each line does.
 
@@ -140,12 +142,12 @@ Explain what capability flags do and why they matter. Show how to construct `Ope
 
 ### 4. Tool Calling
 
-Show how to define a tool using `@LLMTool` and use it with `LanguageModelSession`. Must demonstrate:
-- Tool definition with the macro
+Show how to define a tool conforming to `Tool` and use it with `LanguageModelSession`. Must demonstrate:
+- `name`, `description`, `@Generable` arguments, and `call(arguments:)`
 - Passing tools to the session
 - The model calling the tool and the session executing it
 
-Reference the visionOS examples app `ToolCallingView.swift` for a complete app implementation.
+Reference `ToolCallingView.swift` in both the visionOS and macOS examples apps.
 
 ### 5. Structured Output
 
@@ -154,25 +156,26 @@ Show how to use `@Generable` to get typed, schema-constrained output from a mode
 - Using `session.respond(to:generating:)` to get typed output
 - The role of the `structuredOutput` capability flag
 
-Reference `StructuredOutputView.swift` for a complete example.
+Reference `StructuredOutputView.swift` in both the visionOS and macOS examples apps.
 
 ### 6. Image Input
 
 Show how to send image attachments in prompts for models with `imageInput: true`. Must demonstrate:
 - Creating an image attachment
+- A non-empty `.label(_:)` sent as text immediately before the image
 - Passing it to the session prompt
 - The image being encoded as a base64 JPEG data URI under the hood
 
-Reference `ImageInputView.swift` for a complete example.
+Reference `ImageInputView.swift` in both the visionOS and macOS examples apps. The macOS app decodes with `NSImage`. Do not reproduce that app code.
 
 ### 7. Reasoning
 
 Show how to enable extended thinking for models with `reasoning: true`. Must demonstrate:
 - Setting the `reasoning` capability flag
-- Using reasoning effort in generation options
-- Accessing the model's reasoning output
+- Using `ContextOptions(reasoningLevel:)`
+- Accessing the model's reasoning output from `transcriptEntries`
 
-Reference `ReasoningView.swift` for a complete example.
+Reference `ReasoningView.swift` in both the visionOS and macOS examples apps.
 
 ### 8. Limits
 
@@ -285,10 +288,10 @@ Directive: "Consult Spec/ files for detailed design decisions."
 ### Testing Strategy
 
 Two test targets:
-- Unit tests (4 suites) — no live API calls, test translation components in isolation
-- Integration tests (5 suites) — end-to-end through `LanguageModelSession` against a live endpoint, gated on environment variables
+- Unit tests (5 suites) — ErrorMapper, OpenResponsesModel, RequestBuilder, EventTranslator, OpenResponsesExecutor. No live API calls.
+- Integration tests (7 suites) — BasicGeneration, Sampling, ToolCalling, StructuredOutput, Reasoning, ImageInput, ErrorHandling. End-to-end through `LanguageModelSession` against a live endpoint, gated on environment variables.
 - Swift Testing framework (`@Test`, `#expect`, `@Suite`) for both targets
-- Environment variables: `OPEN_RESPONSES_BASE_URL`, `OPEN_RESPONSES_API_KEY`, plus optional capability flags
+- Environment variables: `OPEN_RESPONSES_BASE_URL`, `OPEN_RESPONSES_API_KEY`, plus optional capability flags. `OPEN_RESPONSES_IMAGE_INPUT` defaults to off.
 
 ### Constraints
 

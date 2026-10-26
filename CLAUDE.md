@@ -35,7 +35,7 @@ Key decision: capability flags are declared per-model at init time, not auto-det
 |------|---------|
 | `OpenResponsesLanguageModel.swift` | `LanguageModel` conformance, capability mapping |
 | `OpenResponsesModel.swift` | Model identity + `Capabilities` flags |
-| `OpenResponsesExecutor.swift` | `LanguageModelExecutor` conformance, `LLMClient` init |
+| `OpenResponsesExecutor.swift` | `LanguageModelExecutor` conformance, `LLMClient` init, `prewarm` |
 | `RequestBuilder.swift` | Transcript-to-`ResponseRequest` translation |
 | `EventTranslator.swift` | Stream event-to-channel action translation |
 | `ErrorMapper.swift` | Error mapping + `OpenResponsesError` definition |
@@ -64,7 +64,7 @@ Consult `Spec/` files for detailed design decisions:
 Two test targets:
 
 - **SwiftOpenResponsesLanguageModelTests** — Unit tests for the translation components. No network calls. Five suites: ErrorMapperTests, OpenResponsesModelTests, RequestBuilderTests, EventTranslatorTests, OpenResponsesExecutorTests.
-- **IntegrationTests** — End-to-end tests through `LanguageModelSession` against a live Open Responses endpoint. Gated on environment variables; skip if not configured. Five suites: BasicGeneration, ToolCalling, StructuredOutput, Reasoning, ErrorHandling.
+- **IntegrationTests** — End-to-end tests through `LanguageModelSession` against a live Open Responses endpoint. Gated on environment variables; skip if not configured. Seven suites: BasicGeneration, Sampling, ToolCalling, StructuredOutput, Reasoning, ImageInput, ErrorHandling.
 
 Both use Swift Testing framework (`@Test`, `#expect`, `@Suite`).
 
@@ -92,3 +92,4 @@ Integration test environment variables:
 - `OPEN_RESPONSES_REASONING_MODEL_ID` — reasoning model ID (optional, enables reasoning tests)
 - `OPEN_RESPONSES_STRUCTURED_OUTPUT` — `true`/`false` (default: `true`)
 - `OPEN_RESPONSES_TOOL_CALLING` — `true`/`false` (default: `true`)
+- `OPEN_RESPONSES_IMAGE_INPUT` — `true` to run the image suite (default: unset, suite skips)

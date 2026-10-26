@@ -18,13 +18,14 @@ let lm = OpenResponsesLanguageModel(
 )
 
 let session = LanguageModelSession(model: lm)
+session.prewarm()
 let stream = session.streamResponse(to: "Explain Swift concurrency.")
 for try await partial in stream {
     print(partial.content)
 }
 ```
 
-`OpenResponsesModel` declares the model's identity and capabilities. `OpenResponsesLanguageModel` wraps it into a `LanguageModel` that `LanguageModelSession` can use. From there, the session API is identical to on-device usage.
+`OpenResponsesModel` declares identity and capabilities. `OpenResponsesLanguageModel` is the `LanguageModel` passed to `LanguageModelSession`. `prewarm()` returns immediately, does not generate, and schedules a `GET` on the client's session.
 
 ## 2. Auth Modes
 
@@ -109,7 +110,7 @@ let result = try await session.respond(to: "What day is it today?")
 print(result.content)
 ```
 
-See [Examples/visionOS/visionOSExamplesApp/Examples/ToolCallingView.swift](../Examples/visionOS/visionOSExamplesApp/Examples/ToolCallingView.swift) for a complete app implementation.
+See [ToolCallingView.swift](../Examples/visionOS/visionOSExamplesApp/Examples/ToolCallingView.swift) in the visionOS examples app and [the macOS copy](../Examples/macOS/macOSExamplesApp/Examples/ToolCallingView.swift).
 
 ## 5. Structured Output
 
@@ -136,7 +137,7 @@ print(response.content.year)    // e.g. 1982
 print(response.content.reason)  // e.g. "A landmark in visual science fiction..."
 ```
 
-See [Examples/visionOS/visionOSExamplesApp/Examples/StructuredOutputView.swift](../Examples/visionOS/visionOSExamplesApp/Examples/StructuredOutputView.swift) for a complete app.
+See [StructuredOutputView.swift](../Examples/visionOS/visionOSExamplesApp/Examples/StructuredOutputView.swift) in the visionOS examples app and [the macOS copy](../Examples/macOS/macOSExamplesApp/Examples/StructuredOutputView.swift).
 
 ## 6. Image Input
 
@@ -160,7 +161,7 @@ for try await partial in stream {
 }
 ```
 
-Images are JPEG-encoded at 0.8 quality and sent as base64 data URIs. A non-empty attachment label is sent as text immediately before that image. See [Examples/visionOS/visionOSExamplesApp/Examples/ImageInputView.swift](../Examples/visionOS/visionOSExamplesApp/Examples/ImageInputView.swift) for a complete app with PhotosPicker integration.
+Images are JPEG-encoded at 0.8 quality and sent as base64 data URIs. A non-empty attachment label is sent as text immediately before that image. See [ImageInputView.swift](../Examples/visionOS/visionOSExamplesApp/Examples/ImageInputView.swift) in the visionOS examples app and [the macOS copy](../Examples/macOS/macOSExamplesApp/Examples/ImageInputView.swift), which decodes with `NSImage`.
 
 ## 7. Reasoning
 
@@ -186,7 +187,7 @@ let reasoning = result.transcriptEntries.compactMap { entry -> String? in
 print(reasoning.joined(separator: "\n\n"))
 ```
 
-Reasoning levels: `.light`, `.moderate`, `.deep`. See [Examples/visionOS/visionOSExamplesApp/Examples/ReasoningView.swift](../Examples/visionOS/visionOSExamplesApp/Examples/ReasoningView.swift) for a complete app.
+Reasoning levels: `.light`, `.moderate`, `.deep`. See [ReasoningView.swift](../Examples/visionOS/visionOSExamplesApp/Examples/ReasoningView.swift) in the visionOS examples app and [the macOS copy](../Examples/macOS/macOSExamplesApp/Examples/ReasoningView.swift).
 
 ## 8. Limits
 

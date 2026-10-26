@@ -16,7 +16,7 @@ Create a lean documentation suite for a project that currently has no README, CL
 
 1. **Proportionality** — 4 public types. One getting-started guide covers the full progression — no multiple topic guides, no DocC catalog, no agent skills.
 2. **Substitutability as the story** — The README's code example shows the FoundationModels baseline (on-device) alongside the OpenResponsesLanguageModel alternative (remote provider). The user sees that only the model passed to `LanguageModelSession` changes.
-3. **Progressive disclosure** — README shows install + one example. The getting-started guide builds from basic streaming through auth, capabilities, tool calling, structured output, image input, and reasoning. Each section builds on the previous one.
+3. **Progressive disclosure** — README shows install, one example, and the Why section's three consequences (capability flags, local and enterprise servers, a thin adapter). It names each consequence and does not explain the mechanics. The getting-started guide builds from basic streaming through auth, capabilities, tool calling, structured output, image input, and reasoning. Each section builds on the previous one. `docs/philosophy.md` keeps the design rationale.
 4. **Two audiences** — Humans read README and the guide; AI tools read AGENTS.md; contributors read CLAUDE.md. No content is duplicated across files.
 5. **Examples already exist** — visionOS and macOS each have an examples app and an endpoint test app under `Examples/`. The iOS test app is specified in `Examples/iOS/Specs/` and has no target yet. The guide references the apps and does not reproduce full app code.
 
@@ -26,7 +26,7 @@ Create a lean documentation suite for a project that currently has no README, CL
 
 **Purpose:** Landing page. Gets the reader from zero to first streaming response in under 60 seconds of reading.
 
-**Target length:** ~80 lines.
+**Target length:** ~95 lines. The extra length is the Why section's user-facing consequences. Do not spend it on a new section.
 
 **Structure:**
 
@@ -46,11 +46,14 @@ Immediately under that description, one sentence: this project was started with 
 
 ### Why Section
 
-~15-20 lines introducing the project's philosophy focused on **provider freedom**:
+~20-25 lines introducing the project's philosophy focused on **provider freedom**. State the problem and the specification approach, then the three consequences below. Each consequence is one or two sentences. Do not add a feature section, and do not explain the mechanics here.
+
 - FoundationModels gives Swift a unified session API, but the on-device model is one provider among many
 - The problem: provider lock-in forces app rewrites when switching providers
 - The solution: target a specification (Open Responses), not a provider — any compatible endpoint works automatically
-- The bridge is intentionally thin — three translation layers, no business logic
+- **Capability flags.** Declared flags keep unsupported fields off the wire. A flag that is off omits that feature even when the session asks for it, so the result is the declaration rather than a provider error on the first request. The flag table later on this page is the reference. How to set flags, and what each omission looks like, stays in `docs/getting-started.md`. The case against auto-detection stays in `docs/philosophy.md`.
+- **Local servers and enterprise proxies.** The adapter tolerates them: an empty API key for LM Studio, proxied headers with no `Authorization` header, and streams that end without `response.completed`. Name those three. Do not explain the sentinel key, header forwarding, zero-usage fallback, or out-of-order tool-argument buffering. Auth mechanics stay in the getting-started guide. The rest stays in `docs/philosophy.md`.
+- **Thin adapter.** The app keeps FoundationModels' session. This package adds no cache, retry policy, or second conversation store. Leave the translator names and the independent-evolution rationale to `docs/philosophy.md`.
 - Link to `docs/philosophy.md` for the full design philosophy
 
 ### The Substitutability Story
@@ -107,7 +110,7 @@ One line with link to LICENSE file.
 
 ### Constraints
 
-- README is a landing page — feature details live in the getting-started guide
+- README is a landing page. The Why section names the three consequences above and stops there. Mechanics and per-feature usage stay in the getting-started guide and `docs/philosophy.md`
 - No inline API documentation — the WHAT spec serves as the detailed reference
 - Tone: direct and practical, no marketing language
 

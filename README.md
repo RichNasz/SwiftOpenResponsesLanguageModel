@@ -18,7 +18,11 @@ The problem is provider lock-in. Each LLM provider has its own SDK, its own requ
 
 This package solves it by targeting a *specification*, not a provider. The [Open Responses API](https://www.openresponses.org/) defines a standard inference endpoint that any provider can implement. SwiftOpenResponsesLanguageModel bridges FoundationModels (the app-facing API) to Open Responses (the provider-facing protocol). The result: write your app once against `LanguageModelSession`, swap providers by changing one line.
 
-The bridge is intentionally thin — no business logic, no caching, no opinions. Three translation layers convert requests in, events out, and errors between. Both FoundationModels and Open Responses can evolve independently; only the affected translator needs updating.
+Declared capability flags keep unsupported fields off the wire. A flag that is off omits that feature even when the session asks for it. The declaration decides the request, and the first call does not fail with a provider error for a field the flag left out. The flag table below is the list. [Getting started](docs/getting-started.md) shows how to set each flag.
+
+The same model works with local servers and enterprise proxies. An empty API key connects to LM Studio. Proxied mode sends your headers and no `Authorization` header. A stream that ends without `response.completed` still finishes the session.
+
+The app keeps the FoundationModels session. This package adds no cache, retry policy, or second conversation store.
 
 See [docs/philosophy.md](docs/philosophy.md) for the full design philosophy.
 
